@@ -26,8 +26,10 @@ Model baru sudah disertakan sehingga pelatihan ulang tidak diperlukan untuk menj
 
 ## Input dan hasil
 
-Semua nominal diisi langsung dalam rupiah penuh tanpa pemisah angka
-Contoh `8000000` berarti Rp8 juta
+Semua nominal diisi dalam rupiah penuh dan diformat otomatis saat diketik
+Contoh `8000000` tampil sebagai `8.000.000`
+Input salin-tempel seperti `Rp 8.000.000` juga didukung
+Angka desimal, nilai negatif, dan susunan pemisah yang tidak valid ditolak di browser serta server
 
 - Penghasilan pemohon Rp2 juta sampai Rp40 juta per bulan
 - Penghasilan pendamping Rp0 sampai Rp15 juta per bulan
@@ -44,6 +46,24 @@ Bunga tersebut merupakan asumsi tugas, bukan tarif produk lembaga keuangan
 Nominal diproses langsung dalam rupiah, tanpa konversi dolar
 Model tidak menggunakan gender, status pernikahan, pendidikan, atau lokasi tempat tinggal
 Data formulir tidak disimpan ke database atau penyimpanan browser
+
+## Perkiraan nominal dan rincian biaya
+
+Perkiraan nominal adalah perhitungan anggaran yang terpisah dari prediksi classifier
+Asumsi tugas: seluruh cicilan maksimal 40% penghasilan gabungan dan sisa setelah biaya hidup serta cicilan minimal 15% penghasilan
+Ruang cicilan baru adalah nilai terkecil dari dua batas berikut, dengan minimum nol
+
+- `40% × penghasilan − cicilan berjalan`
+- `penghasilan − biaya hidup − cicilan berjalan − 15% × penghasilan`
+
+Ruang cicilan dikonversi menjadi pokok pinjaman melalui invers rumus anuitas pada tenor yang dipilih
+Nominal dibulatkan turun ke kelipatan Rp100.000 dan dibatasi pada rentang Rp1 juta sampai Rp500 juta
+Jika tidak ada nominal dalam rentang tersebut, aplikasi tidak menawarkan tombol penggunaan nominal
+Perkiraan ini bukan limit atau jaminan persetujuan lembaga keuangan
+
+Rincian biaya memisahkan pokok pinjaman, total bunga, dan total pokok + bunga
+Administrasi, provisi, asuransi, dan biaya lain ditulis belum diperhitungkan karena tidak ada tarif pemberi pinjaman yang terhubung
+Penjelasan hasil merangkum sisa anggaran, rasio cicilan, dan riwayat yang dimasukkan tanpa mengklaim sebagai penjelasan sebab akibat classifier
 
 ## Untuk presentasi
 
@@ -74,6 +94,12 @@ Kalibrasi di sini hanya berlaku terhadap mekanisme pembentukan label sintetis
 ```sh
 python train_model.py
 python -m unittest discover -s tests -v
+```
+
+Tes format rupiah dan kalkulator browser memakai Node.js tanpa paket tambahan
+
+```sh
+node --test tests/money.test.mjs
 ```
 
 Pelatihan menulis ulang `model.pkl`, `model_metadata.json`, `Dataset/kreditly_synthetic_idr.csv`, dan `MODEL_CARD.md`

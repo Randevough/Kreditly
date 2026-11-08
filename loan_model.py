@@ -36,3 +36,22 @@ def feature_row(data):
     # Ratios make identical financial burdens comparable across income levels
     return [details['debt_ratio'], details['remaining'] / details['income'],
             float(data['Credit_History'] == 0), float(data['Credit_History'] == 1)]
+
+
+# Budget assumptions for coursework, not a lender's underwriting limits
+MAX_DEBT_SHARE = .40
+RESERVE_SHARE = .15
+CAPACITY_STEP = 100_000
+
+
+def borrowing_capacity(data):
+    income = data['ApplicantIncome'] + data['CoapplicantIncome']
+    debt_room = MAX_DEBT_SHARE * income - data['ExistingInstallments']
+    cash_room = income - data['LivingExpenses'] - data['ExistingInstallments'] - RESERVE_SHARE * income
+    monthly_budget = max(0, min(debt_room, cash_room))
+    raw_amount = monthly_budget / installment(1, data['Loan_Amount_Term'])
+    amount = min(INPUT_LIMITS['LoanAmount'][1], math.floor(raw_amount / CAPACITY_STEP) * CAPACITY_STEP)
+    if amount < INPUT_LIMITS['LoanAmount'][0]:
+        amount = 0
+    return {'monthly_budget': monthly_budget, 'amount': amount,
+            'reserve': RESERVE_SHARE * income, 'capped': raw_amount > INPUT_LIMITS['LoanAmount'][1]}

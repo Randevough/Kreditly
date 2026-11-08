@@ -2,8 +2,11 @@ from pathlib import Path
 import pickle
 from flask import Flask, render_template, request
 
-from loan_model import FEATURE_NAMES, INPUT_LIMITS, TERMS, feature_row, financials
+from loan_model import (FEATURE_NAMES, INPUT_LIMITS, TERMS, ANNUAL_INTEREST,
+                        MAX_DEBT_SHARE, RESERVE_SHARE, CAPACITY_STEP,
+                        feature_row, financials, borrowing_capacity)
 import math
+import re
 
 app = Flask(__name__)
 # Only load the artifact produced by this repository's train_model.py
@@ -19,6 +22,23 @@ def rupiah(value):
     return f'{value:,.0f}'.replace(',', '.')
 
 
+@app.context_processor
+def calculator_settings():
+    return {'calculator_config': {
+        'monthlyRate': ANNUAL_INTEREST / 12, 'maxDebtShare': MAX_DEBT_SHARE,
+        'reserveShare': RESERVE_SHARE, 'capacityStep': CAPACITY_STEP,
+        'minLoan': INPUT_LIMITS['LoanAmount'][0], 'maxLoan': INPUT_LIMITS['LoanAmount'][1],
+    }}
+
+
+def parse_rupiah(raw, name):
+    # Accept whole rupiah or correctly grouped Indonesian amounts, never decimals
+    raw = raw.strip()
+    if len(raw) > 32 or not re.fullmatch(r'(?:Rp\s*)?(?:[0-9]+|[0-9]{1,3}(?:\.[0-9]{3})+)', raw, re.IGNORECASE):
+        raise ValueError(name)
+    return int(re.sub(r'^Rp\s*', '', raw, flags=re.IGNORECASE).replace('.', ''))
+
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
     return render_template('index.html', values=request.form)
@@ -30,7 +50,7 @@ def predict():
         data = {}
         for name, (minimum, maximum) in INPUT_LIMITS.items():
             try:
-                value = float(request.form[name])
+                value = parse_rupiah(request.form[name], name)
             except ValueError:
                 raise ValueError(name) from None
             if not math.isfinite(value) or not minimum <= value <= maximum:
@@ -42,6 +62,9 @@ def predict():
                 raise ValueError(name)
             data[name] = int(value)
         details = financials(data)
+        values = {name: str(value) for name, value in data.items()}
+        capacity = borrowing_capacity(data)
+        capacity_values = {**values, 'LoanAmount': str(int(capacity['amount']))}
         probability = float(model.predict_proba([feature_row(data)])[0][1])
         credit_labels = {0: 'Pernah menunggak', 1: 'Pembayaran lancar', 2: 'Belum punya riwayat'}
         # Compare explicit input changes, not causal explanations of the classifier
@@ -60,13 +83,32 @@ def predict():
                 'label': label, 'amount': rupiah(amount), 'term': term,
                 'installment': rupiah(plan_details['installment']),
                 'total': rupiah(plan_details['installment'] * term),
+                'saving': rupiah(abs(details['installment'] - plan_details['installment'])),
+                'lower_payment': plan_details['installment'] <= details['installment'],
                 'approved': plan_probability >= metadata['decision_threshold'],
-                'values': {**request.form, 'LoanAmount': str(int(amount)), 'Loan_Amount_Term': str(term)},
+                'values': {**values, 'LoanAmount': str(int(amount)), 'Loan_Amount_Term': str(term)},
             })
         expenses = [data['LivingExpenses'], data['ExistingInstallments'], details['installment'],
                     max(0, details['remaining'])]
         denominator = max(details['income'], sum(expenses))
         shares = [value / denominator * 100 for value in expenses]
+        explanations = []
+        if details['remaining'] < 0:
+            explanations.append(('Anggaran bulanan belum cukup',
+                f"Kebutuhan dan seluruh cicilan melebihi penghasilan sekitar Rp{rupiah(-details['remaining'])} per bulan"))
+        else:
+            explanations.append(('Masih ada sisa penghasilan',
+                f"Setelah kebutuhan dan seluruh cicilan, tersisa sekitar Rp{rupiah(details['remaining'])} per bulan"))
+        if details['debt_ratio'] > MAX_DEBT_SHARE:
+            explanations.append(('Porsi cicilan cukup besar',
+                f"Total cicilan setara {details['debt_ratio'] * 100:.1f}% penghasilan, di atas acuan 40% yang dipakai aplikasi".replace('.', ',')))
+        else:
+            explanations.append(('Porsi cicilan dalam acuan anggaran',
+                f"Total cicilan setara {details['debt_ratio'] * 100:.1f}% penghasilan, masih di dalam acuan 40% aplikasi".replace('.', ',')))
+        if data['Credit_History'] == 0:
+            explanations.append(('Ada riwayat menunggak', 'Riwayat yang kamu masukkan ikut dipertimbangkan oleh model, kemampuan membayar saja belum menjamin persetujuan'))
+        elif probability < metadata['decision_threshold'] and details['remaining'] >= 0 and details['debt_ratio'] <= MAX_DEBT_SHARE:
+            explanations.append(('Hasil model masih perlu ditinjau', 'Anggaran yang tersisa bukan satu-satunya masukan model sehingga hasil prediksi bisa berbeda dari perkiraan nominal'))
         return render_template(
             'result.html', approved=probability >= metadata['decision_threshold'],
             amount=rupiah(data['LoanAmount']), term=data['Loan_Amount_Term'],
@@ -75,9 +117,14 @@ def predict():
             debt_ratio=f"{details['debt_ratio'] * 100:.1f}".replace('.', ','),
             income=rupiah(details['income']), living=rupiah(data['LivingExpenses']),
             existing=rupiah(data['ExistingInstallments']), credit_label=credit_labels[data['Credit_History']],
-            shares=shares, comparisons=comparisons,
+            shares=shares, comparisons=comparisons, explanations=explanations,
+            capacity_amount=rupiah(capacity['amount']), capacity_available=capacity['amount'] > 0,
+            capacity_budget=rupiah(capacity['monthly_budget']), capacity_reserve=rupiah(capacity['reserve']),
+            capacity_capped=capacity['capped'], capacity_values=capacity_values,
+            total_payment=rupiah(details['installment'] * data['Loan_Amount_Term']),
+            total_interest=rupiah(details['installment'] * data['Loan_Amount_Term'] - data['LoanAmount']),
             near_boundary=abs(probability - metadata['decision_threshold']) < .1,
-            values=request.form,
+            values=values,
         )
     except (KeyError, ValueError) as exc:
         field = str(exc.args[0]) if exc.args else ''

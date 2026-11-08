@@ -8,9 +8,10 @@
 {% for value, text in options %}<option value="{{ value }}" {% if values.get(name) == value %}selected{% endif %}>{{ text }}</option>{% endfor %}
 </select>
 {% else %}
-<div class="input-wrap">{% if prefix %}<span aria-hidden="true">{{ prefix }}</span>{% endif %}<input id="{{ name }}" name="{{ name }}" type="number" inputmode="decimal" min="{{ minimum }}" max="{{ maximum }}" step="1" required placeholder="{{ placeholder }}" value="{{ values.get(name, '') }}" aria-describedby="{{ name }}-hint" {% if error_field == name %}aria-invalid="true"{% endif %}>{% if suffix %}<span>{{ suffix }}</span>{% endif %}</div>
+<div class="input-wrap">{% if prefix %}<span aria-hidden="true">{{ prefix }}</span>{% endif %}<input id="{{ name }}" name="{{ name }}" type="text" inputmode="numeric" data-money data-min="{{ minimum }}" data-max="{{ maximum }}" maxlength="32" required placeholder="{{ placeholder }}" value="{{ values.get(name, '') }}" aria-describedby="{{ name }}-hint {{ name }}-error" {% if error_field == name %}aria-invalid="true"{% endif %}>{% if suffix %}<span>{{ suffix }}</span>{% endif %}</div>
 {% endif %}
 <small id="{{ name }}-hint">{{ hint }}</small>
+{% if not options %}<span class="field-error" id="{{ name }}-error" aria-live="polite" hidden></span>{% endif %}
 </div>
 {%- endmacro %}
 {% block content %}
@@ -18,19 +19,20 @@
 
 <div class="layout">
 <section class="card" aria-labelledby="form-title">
-<div class="card-head"><div><h2 id="form-title">Profil & rencana pinjaman</h2><p>Isi datamu atau pilih salah satu contoh profil</p></div></div>
+<div class="card-head"><div><h2 id="form-title">Profil & rencana pinjaman</h2><p>Mulai dari penghasilan dan kebutuhan bulananmu</p></div></div>
+<div class="example-heading">Ingin mencoba lebih dulu? Pilih contoh profil</div>
 <div class="profile-examples" role="group" aria-label="Contoh profil"><button type="button" class="profile-option" id="example" data-profile="balanced" aria-pressed="false"><strong>Pengeluaran terjaga</strong><span>Penghasilan gabungan Rp10 juta</span></button><button type="button" class="profile-option" data-profile="tight" aria-pressed="false"><strong>Cicilan tinggi</strong><span>Penghasilan Rp5 juta</span></button><button type="button" class="profile-option" data-profile="new" aria-pressed="false"><strong>Riwayat kredit baru</strong><span>Penghasilan Rp6 juta</span></button></div>
 <form action="/predict" method="post" id="loan-form">
 {% if error %}<div class="error" id="error-summary" role="alert" tabindex="-1"><strong>Periksa kembali datamu</strong><p>{{ error }}</p>{% if error_field %}<a href="#{{ error_field }}">Perbaiki kolom yang ditandai</a>{% endif %}</div>{% endif %}
-<fieldset><legend><span class="section-number">01</span> Informasi keuangan</legend><p class="section-description">Isi nominal rupiah lengkap tanpa pemisah angka</p><div class="fields">
-{{ field('ApplicantIncome', 'Penghasilan bulanan', 'Rp2 juta sampai Rp40 juta per bulan', prefix='Rp', placeholder='8000000', minimum='2000000') }}
+<fieldset><legend><span class="section-number">01</span> Informasi keuangan</legend><p class="section-description">Ketik nominal rupiah, pemisah ribuan akan terisi otomatis</p><div class="fields">
+{{ field('ApplicantIncome', 'Penghasilan bulanan', 'Rp2 juta sampai Rp40 juta per bulan', prefix='Rp', placeholder='8.000.000', minimum='2000000') }}
 {{ field('CoapplicantIncome', 'Penghasilan pendamping', 'Isi 0 jika mengajukan sendiri', prefix='Rp', placeholder='0', maximum='15000000') }}
-{{ field('LoanAmount', 'Jumlah pinjaman', 'Rp1 juta sampai Rp500 juta', prefix='Rp', placeholder='50000000', minimum='1000000', maximum='500000000') }}
+{{ field('LoanAmount', 'Jumlah pinjaman', 'Rp1 juta sampai Rp500 juta', prefix='Rp', placeholder='50.000.000', minimum='1000000', maximum='500000000') }}
 {{ field('Loan_Amount_Term', 'Tenor pinjaman', 'Lama pengembalian dalam bulan', [('6','6 bulan'),('12','12 bulan · 1 tahun'),('18','18 bulan'),('24','24 bulan · 2 tahun'),('36','36 bulan · 3 tahun'),('48','48 bulan · 4 tahun'),('60','60 bulan · 5 tahun')]) }}
 </div></fieldset>
 <fieldset><legend><span class="section-number">02</span> Profil & riwayat</legend><p class="section-description">Lengkapi pengeluaran dan riwayat kreditmu</p><div class="fields">
-{{ field('ExistingInstallments', 'Cicilan berjalan per bulan', 'Total cicilan lain, isi 0 jika tidak ada', prefix='Rp', placeholder='500000', maximum='20000000') }}
-{{ field('LivingExpenses', 'Biaya hidup bulanan', 'Total kebutuhan rutin di luar cicilan', prefix='Rp', placeholder='3500000') }}
+{{ field('ExistingInstallments', 'Cicilan berjalan per bulan', 'Total cicilan lain, isi 0 jika tidak ada', prefix='Rp', placeholder='500.000', maximum='20000000') }}
+{{ field('LivingExpenses', 'Biaya hidup bulanan', 'Total kebutuhan rutin di luar cicilan', prefix='Rp', placeholder='3.500.000') }}
 {{ field('Credit_History','Riwayat pembayaran kredit','Pilih kondisi yang sesuai', [('1','Pembayaran lancar'),('0','Pernah menunggak'),('2','Belum punya riwayat kredit')]) }}
 </div></fieldset>
 
@@ -38,9 +40,15 @@
 <p class="privacy">Data formulir tidak disimpan ke database</p>
 <noscript><p>Aktifkan JavaScript untuk memakai ringkasan otomatis dan contoh profil, formulir tetap dapat dikirim</p></noscript>
 </form></section>
-<aside class="right"><section class="summary" aria-labelledby="summary-title"><h2 id="summary-title">Ringkasan pinjaman</h2><p>Total pinjaman</p><div class="summary-value" id="amount">Rp0</div><dl><div><dt>Tenor pinjaman</dt><dd id="term">Belum diisi</dd></div><div><dt>Penghasilan gabungan / bulan</dt><dd id="income">Belum diisi</dd></div><div class="monthly"><dt>Estimasi cicilan / bulan</dt><dd id="monthly">Belum diisi</dd></div></dl><p class="summary-note">Estimasi dengan bunga 1% per bulan, belum termasuk biaya lain</p><div class="live-indicators"><div><span>Rasio seluruh cicilan</span><strong id="live-ratio">Belum dihitung</strong></div><div><span>Sisa setelah kebutuhan</span><strong id="live-remaining">Belum dihitung</strong></div></div><div class="progress-head"><span>Kelengkapan profil</span><span id="completion" role="status" aria-live="polite">0 / 7</span></div><progress id="progress" max="7" value="0" aria-label="Kelengkapan profil">0 / 7</progress></section>
-<section class="info" id="panduan">{{ icon('info') }}<div><h3>Panduan pengisian</h3><p>Gunakan penghasilan bulanan dan biaya hidup di luar cicilan, lalu masukkan total cicilan yang masih berjalan</p><details><summary>Tentang model penilaian</summary><p>Model dilatih dengan data sintetis untuk tugas dan belum divalidasi pada peminjam nyata, hasil penilaian bukan persetujuan kredit</p></details></div></section>
+<aside class="right">
+<section class="summary loan-preview" aria-labelledby="summary-title"><span class="summary-kicker">RENCANA PINJAMANMU</span><h2 id="summary-title">Perkiraan cicilan bulanan</h2><div class="summary-value primary-payment" id="monthly">Lengkapi rencana</div><p class="summary-note">Bunga 1% per bulan atas sisa pokok pinjaman</p>
+<dl><div><dt>Jumlah pinjaman</dt><dd id="amount">Belum diisi</dd></div><div><dt>Tenor</dt><dd id="term">Pilih tenor</dd></div><div><dt>Penghasilan gabungan</dt><dd id="income">Belum diisi</dd></div></dl>
+<details class="preview-costs"><summary>Rincian pokok dan bunga</summary><dl><div><dt>Perkiraan total bunga</dt><dd id="live-interest">Belum dihitung</dd></div><div><dt>Total pokok + bunga</dt><dd id="live-total">Belum dihitung</dd></div></dl><p class="summary-note">Administrasi, asuransi, dan biaya lain belum diperhitungkan</p></details>
+<div class="live-indicators"><div><span>Rasio seluruh cicilan</span><strong id="live-ratio">Belum dihitung</strong></div><div><span>Sisa setelah kebutuhan</span><strong id="live-remaining">Belum dihitung</strong></div></div>
+<div class="progress-head"><span id="completion" role="status" aria-live="polite">0 dari 7 kolom terisi</span></div><progress id="progress" max="7" value="0" aria-label="Kelengkapan profil">0 dari 7</progress></section>
+<section class="capacity-preview" aria-labelledby="capacity-preview-title"><span class="capacity-label">SESUAI ANGGARANMU</span><h3 id="capacity-preview-title">Perkiraan nominal pinjaman</h3><div class="capacity-value" id="live-capacity">Lengkapi anggaranmu</div><p id="capacity-context">Isi penghasilan, pengeluaran, dan tenor untuk melihat perkiraan</p><button type="button" id="use-capacity" class="secondary" hidden>Gunakan nominal ini {{ icon('arrow') }}</button><details><summary>Asumsi perhitungan</summary><p>Total cicilan dibatasi 40% penghasilan dan sisa setelah kebutuhan serta cicilan minimal 15% penghasilan</p><p>Perkiraan anggaran, bukan limit persetujuan pemberi pinjaman</p></details></section>
+<section class="info" id="panduan">{{ icon('info') }}<div><h3>Panduan pengisian</h3><p>Isi biaya hidup di luar cicilan, lalu masukkan total cicilan yang masih berjalan</p><details><summary>Tentang penilaian</summary><p>Model memakai data sintetis untuk tugas dan belum divalidasi pada peminjam nyata, hasil bukan persetujuan kredit</p></details></div></section>
 </aside>
 </div>
 {% endblock %}
-{% block scripts %}<script src="{{ url_for('static', filename='app.js') }}" defer></script>{% endblock %}
+{% block scripts %}<script id="calculator-config" type="application/json">{{ calculator_config|tojson }}</script><script type="module" src="{{ url_for('static', filename='app.js') }}"></script>{% endblock %}

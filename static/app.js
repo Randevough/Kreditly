@@ -1,38 +1,83 @@
+import {parseRupiah, formatInput, formatMoney as money, formatEdit, calculateBudget} from './money.mjs';
+
 const form = document.querySelector('#loan-form');
 const inputs = [...form.querySelectorAll('input[required], select[required]')];
+const moneyInputs = [...form.querySelectorAll('[data-money]')];
 const submit = form.querySelector('[type="submit"]');
-const money = value => new Intl.NumberFormat('id-ID', {
-  style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
-}).format(value);
-const amountValue = name => {
-  const value = Number(form.elements.namedItem(name).value);
-  return Number.isFinite(value) && value >= 0 ? value : 0;
-};
+const config = JSON.parse(document.querySelector('#calculator-config').textContent);
+const profileButtons = [...document.querySelectorAll('[data-profile]')];
+const capacityButton = document.querySelector('#use-capacity');
+let currentCapacity = 0;
+const amountValue = name => parseRupiah(form.elements.namedItem(name).value) ?? 0;
+const setText = (id, value) => { document.getElementById(id).textContent = value; };
+
+function validateMoney(input, reveal = false) {
+  const number = parseRupiah(input.value);
+  let message = '';
+  if (!input.value.trim()) message = 'Isi kolom ini';
+  else if (number === null) message = 'Gunakan rupiah bulat, misalnya 8.000.000';
+  else if (number < Number(input.dataset.min) || number > Number(input.dataset.max)) {
+    message = `Isi antara ${money(Number(input.dataset.min))} dan ${money(Number(input.dataset.max))}`;
+  }
+  input.setCustomValidity(message);
+  const error = document.getElementById(`${input.name}-error`);
+  const show = reveal || input.getAttribute('aria-invalid') === 'true';
+  error.textContent = show ? message : '';
+  error.hidden = !show || !message;
+  if (show && message) input.setAttribute('aria-invalid', 'true');
+  else if (!message) input.removeAttribute('aria-invalid');
+  return !message;
+}
+
 function update() {
-  const amount = amountValue('LoanAmount');
-  const term = amountValue('Loan_Amount_Term');
-  const income = amountValue('ApplicantIncome') + amountValue('CoapplicantIncome');
-  document.querySelector('#amount').textContent = Number.isFinite(amount) ? money(amount) : 'Belum diisi';
-  document.querySelector('#term').textContent = term ? `${term} bulan` : 'Belum dipilih';
-  document.querySelector('#income').textContent = money(income);
-  const payment = term && amount ? amount * .01 / (1 - (1.01) ** -term) : 0;
-  document.querySelector('#monthly').textContent = payment ? money(payment) : 'Belum dihitung';
-  const debt = amountValue('ExistingInstallments');
-  const expenses = amountValue('LivingExpenses');
-  document.querySelector('#live-ratio').textContent = income && payment ? `${((debt + payment) / income * 100).toLocaleString('id-ID', {maximumFractionDigits: 1})}%` : 'Belum dihitung';
-  const remaining = income - expenses - debt - payment;
-  document.querySelector('#live-remaining').textContent = income && payment ? money(remaining) : 'Belum dihitung';
-  document.querySelector('#live-remaining').classList.toggle('shortfall', remaining < 0);
+  const values = Object.fromEntries(moneyInputs.map(input => [input.name, amountValue(input.name)]));
+  values.Loan_Amount_Term = Number(form.elements.namedItem('Loan_Amount_Term').value);
+  const amount = values.LoanAmount;
+  const term = values.Loan_Amount_Term;
+  const income = values.ApplicantIncome + values.CoapplicantIncome;
+  const budget = calculateBudget(values, config);
+  const payment = term && amount ? amount * config.monthlyRate / (1 - (1 + config.monthlyRate) ** -term) : 0;
+  setText('amount', amount ? money(amount) : 'Belum diisi');
+  setText('term', term ? `${term} bulan` : 'Pilih tenor');
+  setText('income', income ? money(income) : 'Belum diisi');
+  setText('monthly', payment ? money(payment) : 'Lengkapi rencana');
+  setText('live-total', payment ? money(payment * term) : 'Belum dihitung');
+  setText('live-interest', payment ? money(payment * term - amount) : 'Belum dihitung');
+  const budgetReady = moneyInputs.filter(input => input.name !== 'LoanAmount')
+    .every(input => input.value.trim() !== '' && input.validity.valid) && term > 0;
+  setText('live-ratio', budgetReady && payment ? `${(budget.ratio * 100).toLocaleString('id-ID', {maximumFractionDigits: 1})}%` : 'Belum dihitung');
+  setText('live-remaining', budgetReady && payment ? money(budget.remaining) : 'Belum dihitung');
+  document.querySelector('#live-remaining').classList.toggle('shortfall', !!budget && budget.remaining < 0 && budgetReady);
+  currentCapacity = budgetReady ? budget.capacity : 0;
+  setText('live-capacity', budgetReady ? (currentCapacity ? money(currentCapacity) : 'Belum ada ruang') : 'Lengkapi anggaranmu');
+  setText('capacity-context', budgetReady ? `Untuk tenor ${term} bulan dengan asumsi anggaran aplikasi` : 'Isi penghasilan, pengeluaran, dan tenor untuk melihat perkiraan');
+  capacityButton.hidden = !currentCapacity;
   const completed = inputs.filter(input => input.value !== '' && input.validity.valid).length;
-  document.querySelector('#completion').textContent = `${completed} / ${inputs.length}`;
+  setText('completion', `${completed} dari ${inputs.length} kolom terisi`);
   document.querySelector('#progress').value = completed;
 }
-form.addEventListener('input', event => {
-  if (event.target.validity.valid) event.target.removeAttribute('aria-invalid');
+
+moneyInputs.forEach(input => {
+  const initial = parseRupiah(input.value);
+  if (initial !== null) input.value = formatInput(initial);
+  validateMoney(input);
+  input.addEventListener('input', event => {
+    if (event.isComposing) return;
+    const result = formatEdit(input.value, input.selectionStart ?? input.value.length, event.inputType, event.data);
+    input.value = result.value;
+    input.setSelectionRange(result.caret, result.caret);
+    validateMoney(input);
+  });
+  input.addEventListener('blur', () => validateMoney(input, true));
+});
+form.addEventListener('invalid', event => {
+  if (event.target.matches('[data-money]')) validateMoney(event.target, true);
+}, true);
+form.addEventListener('input', () => {
+  profileButtons.forEach(button => button.setAttribute('aria-pressed', 'false'));
   update();
 });
 form.addEventListener('change', update);
-const profileButtons = [...document.querySelectorAll('[data-profile]')];
 const samples = {
   balanced: { ApplicantIncome: 8000000, CoapplicantIncome: 2000000, LoanAmount: 50000000,
     Loan_Amount_Term: 36, ExistingInstallments: 500000, LivingExpenses: 3500000, Credit_History: 1 },
@@ -43,19 +88,31 @@ const samples = {
 };
 profileButtons.forEach(button => button.addEventListener('click', () => {
   Object.entries(samples[button.dataset.profile]).forEach(([name, value]) => {
-    form.elements.namedItem(name).value = value;
-    form.elements.namedItem(name).removeAttribute('aria-invalid');
+    const input = form.elements.namedItem(name);
+    input.value = input.matches('[data-money]') ? formatInput(value) : value;
+    input.removeAttribute('aria-invalid');
+    if (input.matches('[data-money]')) validateMoney(input);
   });
   profileButtons.forEach(option => option.setAttribute('aria-pressed', String(option === button)));
   document.querySelector('#error-summary')?.remove();
   update();
 }));
-form.addEventListener('input', () => profileButtons.forEach(button => button.setAttribute('aria-pressed', 'false')));
+capacityButton.addEventListener('click', () => {
+  if (!currentCapacity) return;
+  const input = form.elements.namedItem('LoanAmount');
+  input.value = formatInput(currentCapacity);
+  validateMoney(input);
+  input.dispatchEvent(new Event('input', {bubbles: true}));
+  input.focus();
+});
 form.addEventListener('reset', event => {
-  // A native reset would restore server-rendered values after editing a result.
   event.preventDefault();
   profileButtons.forEach(button => button.setAttribute('aria-pressed', 'false'));
-  inputs.forEach(input => { input.value = ''; input.removeAttribute('aria-invalid'); });
+  inputs.forEach(input => {
+    input.value = '';
+    input.removeAttribute('aria-invalid');
+    if (input.matches('[data-money]')) validateMoney(input);
+  });
   document.querySelector('#error-summary')?.remove();
   update();
   inputs[0].focus();

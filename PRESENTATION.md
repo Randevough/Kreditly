@@ -67,3 +67,14 @@ Langkah berikutnya adalah validasi pada data observasi dengan definisi label dan
 `model_metadata.json` untuk angka validasi, test, audit, dan kurva kalibrasi
 `MODEL_CARD.md` untuk asumsi dan batasan
 `tests/test_app.py` untuk pengujian aplikasi serta arah perubahan hasil
+
+## Demo fitur untuk pengguna awam
+
+Ketik `8000000` di penghasilan lalu tunjukkan format otomatis `8.000.000`
+Salin-tempel `Rp 8.000.000` untuk menunjukkan parser tidak mengubah satuan
+Buka rincian biaya untuk memisahkan pokok, bunga, dan biaya lain yang belum diketahui
+Tunjukkan bagian Apa artinya buatmu untuk menjelaskan sisa anggaran dan rasio cicilan
+Pada contoh Pengeluaran terjaga tenor 36 bulan, perkiraan nominal anggaran adalah Rp105.300.000 dengan ruang cicilan baru Rp3.500.000 per bulan
+Gunakan tombol Coba nominal ini untuk memuat nilainya ke formulir sebelum menilai ulang
+Jelaskan bahwa perhitungan memakai asumsi 40% batas seluruh cicilan dan 15% sisa penghasilan, bukan limit persetujuan bank
+Pada contoh Cicilan tinggi, aplikasi tidak menawarkan nominal baru karena ruang anggaran tidak mencukupi
