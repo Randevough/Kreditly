@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% macro field(name, label, hint, options=none, prefix='', suffix='', placeholder='', minimum='0') -%}
+<div class="field">
+<label for="{{ name }}">{{ label }}</label>
+{% if options %}
+<select id="{{ name }}" name="{{ name }}" required aria-describedby="{{ name }}-hint" {% if error_field == name %}aria-invalid="true"{% endif %}>
+<option value="">Pilih {{ label|lower }}</option>
+{% for value, text in options %}<option value="{{ value }}" {% if values.get(name) == value %}selected{% endif %}>{{ text }}</option>{% endfor %}
+</select>
+{% else %}
+<div class="input-wrap">{% if prefix %}<span aria-hidden="true">{{ prefix }}</span>{% endif %}<input id="{{ name }}" name="{{ name }}" type="number" inputmode="decimal" min="{{ minimum }}" step="any" required placeholder="{{ placeholder }}" value="{{ values.get(name, '') }}" aria-describedby="{{ name }}-hint" {% if error_field == name %}aria-invalid="true"{% endif %}>{% if suffix %}<span>{{ suffix }}</span>{% endif %}</div>
+{% endif %}
+<small id="{{ name }}-hint">{{ hint }}</small>
+</div>
+{%- endmacro %}
+{% block content %}
+<div class="heading"><div><span class="eyebrow">RENCANA BESAR, LANGKAH TERUKUR</span><h1>Cek dulu, ajukan kemudian<span>.</span></h1><p>Kenali gambaran kelayakan pinjaman dari profil keuanganmu.</p></div><span class="heading-symbol" aria-hidden="true">↗</span></div>
+<div class="journey" aria-label="Alur simulasi"><span class="current"><b>01</b> Isi profil</span><span><b>02</b> Tinjau ringkasan</span><span><b>03</b> Pahami hasil</span></div>
+<div class="layout">
+<section class="card" aria-labelledby="form-title">
+<div class="card-head"><div><span class="eyebrow">MULAI DARI SINI</span><h2 id="form-title">Profil & rencana pinjaman</h2><p>Semua kolom perlu diisi. Belum punya angka? Coba contoh.</p></div><button type="button" id="example" class="secondary">{{ icon('spark') }} Isi contoh</button></div>
+<form action="/predict" method="post" id="loan-form">
+{% if error %}<div class="error" id="error-summary" role="alert" tabindex="-1"><strong>Periksa kembali datamu</strong><p>{{ error }}</p>{% if error_field %}<a href="#{{ error_field }}">Perbaiki kolom yang ditandai</a>{% endif %}</div>{% endif %}
+<fieldset><legend><span class="section-number">01</span> Informasi keuangan</legend><p class="section-description">Gunakan USD sesuai satuan model, bukan rupiah.</p><div class="fields">
+{{ field('ApplicantIncome', 'Penghasilan bulanan', 'Penghasilan pemohon dalam USD / bulan.', prefix='$', placeholder='5000') }}
+{{ field('CoapplicantIncome', 'Penghasilan pendamping', 'Isi 0 jika mengajukan sendiri.', prefix='$', placeholder='0') }}
+{{ field('LoanAmount', 'Jumlah pinjaman', 'Contoh: 120 berarti US$120.000.', prefix='$', suffix='ribu', placeholder='120', minimum='0.001') }}
+{{ field('Loan_Amount_Term', 'Tenor pinjaman', 'Lama pengembalian dalam bulan.', [('12','12 bulan · 1 tahun'),('36','36 bulan · 3 tahun'),('60','60 bulan · 5 tahun'),('120','120 bulan · 10 tahun'),('180','180 bulan · 15 tahun'),('240','240 bulan · 20 tahun'),('360','360 bulan · 30 tahun')]) }}
+</div></fieldset>
+<fieldset><legend><span class="section-number">02</span> Profil & riwayat</legend><p class="section-description">Informasi yang digunakan oleh model pembelajaran.</p><div class="fields">
+{{ field('Credit_History','Riwayat kredit','Sesuai kriteria kredit pada dataset.', [('1','Memenuhi kriteria'),('0','Belum memenuhi kriteria')]) }}
+{{ field('Self_Employed','Status pekerjaan','Pilih jenis pekerjaan utama.', [('0','Karyawan'),('1','Wiraswasta')]) }}
+{{ field('Dependents','Jumlah tanggungan','Jumlah orang yang ditanggung.', [('0','Tidak ada'),('1','1 orang'),('2','2 orang'),('3+','3 orang atau lebih')]) }}
+{{ field('Property_Area','Area tempat tinggal','Kategori wilayah tempat tinggal.', [('Rural','Pedesaan'),('Semiurban','Pinggiran kota'),('Urban','Perkotaan')]) }}
+{{ field('Education','Pendidikan','Pendidikan terakhir pemohon.', [('1','Lulusan perguruan tinggi'),('0','Non-perguruan tinggi')]) }}
+{{ field('Married','Status pernikahan','Sesuai profil pemohon.', [('0','Belum menikah'),('1','Menikah')]) }}
+{{ field('Gender','Jenis kelamin','Kategori yang tersedia pada dataset.', [('1','Laki-laki'),('0','Perempuan')]) }}
+</div></fieldset>
+<div class="form-disclosure">{{ icon('info') }}<p>Model menggunakan atribut demografis dari dataset asli. Hasil hanya untuk pembelajaran dan belum dikalibrasi untuk Indonesia.</p></div>
+<div class="form-actions"><button class="submit" type="submit"><span>Lihat hasil simulasi</span>{{ icon('arrow') }}</button><button class="reset" type="reset">Kosongkan</button></div>
+<p class="privacy">{{ icon('shield') }} Data formulir tidak disimpan ke database.</p>
+<noscript><p>Ringkasan otomatis dan tombol contoh memerlukan JavaScript. Formulir tetap bisa dikirim.</p></noscript>
+</form></section>
+<aside class="right"><section class="summary" aria-labelledby="summary-title"><span class="pill"><span aria-hidden="true">●</span> RINGKASAN LANGSUNG</span><h2 id="summary-title">Rencanamu,<br>lebih tergambar.</h2><p>Total pinjaman</p><div class="summary-value" id="amount">$0</div><dl><div><dt>Tenor pinjaman</dt><dd id="term">—</dd></div><div><dt>Penghasilan gabungan / bulan</dt><dd id="income">—</dd></div><div class="monthly"><dt>Pokok pinjaman / bulan</dt><dd id="monthly">—</dd></div></dl><p class="summary-note">Belum termasuk bunga dan biaya. Ini pembagian pokok, bukan estimasi cicilan dari pemberi pinjaman.</p><div class="progress-head"><span>Kelengkapan profil</span><span id="completion" role="status" aria-live="polite">0 / 11</span></div><progress id="progress" max="11" value="0" aria-label="Kelengkapan profil">0 / 11</progress></section>
+<section class="info" id="panduan">{{ icon('info') }}<div><h3>Simulasi, tanpa komitmen.</h3><p>Hasil model bukan persetujuan kredit atau penawaran pinjaman. Gunakan untuk mengeksplorasi cara kerja prediksi.</p><details><summary>Kenapa satuannya USD?</summary><p>Model dilatih menggunakan dataset dengan nominal dolar. Mengganti label menjadi rupiah tanpa melatih ulang model dapat membuat hasil menyesatkan.</p></details></div></section>
+<div class="side-caption">Isi profil. Lihat gambaran. Pahami hasil.</div></aside>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='app.js') }}" defer></script>{% endblock %}

@@ -1,0 +1,35 @@
+{% macro icon(name, cls='') -%}
+<svg class="icon {{ cls }}" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'grid' %}<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+{% elif name == 'arrow' %}<path d="M5 12h14m-6-6 6 6-6 6"/>
+{% elif name == 'check' %}<path d="m5 12 4 4L19 6"/>
+{% elif name == 'shield' %}<path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/>
+{% elif name == 'info' %}<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.1"/>
+{% elif name == 'spark' %}<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/>
+{% else %}<path d="M12 8v5m0 3v.1"/><circle cx="12" cy="12" r="9"/>{% endif %}</svg>
+{%- endmacro %}
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Eksplorasi simulasi kelayakan pinjaman bersama Kreditly. Isi profil, tinjau ringkasan, dan pahami hasil model.">
+<title>{% block title %}Kreditly — Simulasi pinjaman{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<a class="skip-link" href="#content">Langsung ke konten</a>
+<aside class="sidebar">
+<a class="brand" href="/" aria-label="Kreditly, beranda"><span class="logo" aria-hidden="true">k.</span>kreditly<span class="brand-dot" aria-hidden="true">.</span></a>
+<div class="workspace">RUANG KERJA</div>
+<a class="nav active" href="/" aria-current="page">{{ icon('grid') }}<span>Simulasi pinjaman</span></a>
+<div class="sidebar-guide"><span class="guide-icon">{{ icon('spark') }}</span><h2>Kenali peluangmu.</h2><p>Mulai dari angka, pahami gambaran pinjamanmu.</p><a href="/#panduan">Tentang simulasi {{ icon('arrow') }}</a></div>
+<div class="sidebar-bottom">{{ icon('shield') }}<div>Ruang eksplorasi<small>Tanpa pengajuan kredit</small></div></div>
+</aside>
+<div class="main">
+<header><a class="mobile-brand" href="/">kreditly.</a><span class="breadcrumb">Workspace <span>/</span> Simulasi pinjaman</span><span class="demo"><i aria-hidden="true"></i> Mode simulasi</span></header>
+<main id="content">{% block content %}{% endblock %}
+<footer><span>Kreditly · Pahami sebelum melangkah.</span><a href="https://github.com/Randevough/Kreditly/blob/main/LICENSE">Lisensi & atribusi</a></footer>
+</main>
+</div>
+{% block scripts %}{% endblock %}
+</body></html>
