@@ -14,7 +14,7 @@
 </div>
 {%- endmacro %}
 {% block content %}
-<div class="heading"><div><span class="eyebrow">PENILAIAN PINJAMAN</span><h1>Cek kelayakan pinjamanmu</h1><p>Masukkan penghasilan dan rencana pinjaman untuk melihat hasil penilaian</p></div><span class="heading-symbol" aria-hidden="true">↗</span></div>
+<div class="heading"><div><span class="eyebrow">RENCANA BESAR, LANGKAH TERUKUR</span><h1>Cek dulu, ajukan kemudian</h1><p>Kenali gambaran kelayakan pinjaman dari profil keuanganmu</p></div><span class="heading-symbol" aria-hidden="true">↗</span></div>
 <div class="journey" aria-label="Alur penilaian"><span class="current"><b>01</b> Isi profil</span><span><b>02</b> Tinjau ringkasan</span><span><b>03</b> Pahami hasil</span></div>
 <div class="layout">
 <section class="card" aria-labelledby="form-title">
@@ -27,7 +27,7 @@
 {{ field('LoanAmount', 'Jumlah pinjaman', 'Rp1 juta sampai Rp500 juta', prefix='Rp', placeholder='50000000', minimum='1000000', maximum='500000000') }}
 {{ field('Loan_Amount_Term', 'Tenor pinjaman', 'Lama pengembalian dalam bulan', [('6','6 bulan'),('12','12 bulan · 1 tahun'),('18','18 bulan'),('24','24 bulan · 2 tahun'),('36','36 bulan · 3 tahun'),('48','48 bulan · 4 tahun'),('60','60 bulan · 5 tahun')]) }}
 </div></fieldset>
-<fieldset><legend><span class="section-number">02</span> Profil & riwayat</legend><p class="section-description">Informasi yang digunakan oleh model pembelajaran</p><div class="fields">
+<fieldset><legend><span class="section-number">02</span> Profil & riwayat</legend><p class="section-description">Lengkapi pengeluaran dan riwayat kreditmu</p><div class="fields">
 {{ field('ExistingInstallments', 'Cicilan berjalan per bulan', 'Total cicilan lain, isi 0 jika tidak ada', prefix='Rp', placeholder='500000', maximum='20000000') }}
 {{ field('LivingExpenses', 'Biaya hidup bulanan', 'Total kebutuhan rutin di luar cicilan', prefix='Rp', placeholder='3500000') }}
 {{ field('Credit_History','Riwayat pembayaran kredit','Pilih kondisi yang sesuai', [('1','Pembayaran lancar'),('0','Pernah menunggak'),('2','Belum punya riwayat kredit')]) }}
@@ -37,7 +37,7 @@
 <p class="privacy">{{ icon('shield') }} Data formulir tidak disimpan ke database</p>
 <noscript><p>Aktifkan JavaScript untuk memakai ringkasan otomatis dan tombol contoh</p></noscript>
 </form></section>
-<aside class="right"><section class="summary" aria-labelledby="summary-title"><span class="pill"><span aria-hidden="true">●</span> RINGKASAN LANGSUNG</span><h2 id="summary-title">Ringkasan pinjaman</h2><p>Total pinjaman</p><div class="summary-value" id="amount">Rp0</div><dl><div><dt>Tenor pinjaman</dt><dd id="term">Belum diisi</dd></div><div><dt>Penghasilan gabungan / bulan</dt><dd id="income">Belum diisi</dd></div><div class="monthly"><dt>Estimasi cicilan / bulan</dt><dd id="monthly">Belum diisi</dd></div></dl><p class="summary-note">Estimasi memakai asumsi bunga efektif 12% per tahun dengan cicilan tetap, belum termasuk biaya lain</p><div class="progress-head"><span>Kelengkapan profil</span><span id="completion" role="status" aria-live="polite">0 / 7</span></div><progress id="progress" max="7" value="0" aria-label="Kelengkapan profil">0 / 7</progress></section>
+<aside class="right"><section class="summary" aria-labelledby="summary-title"><span class="pill"><span aria-hidden="true">●</span> RINGKASAN LANGSUNG</span><h2 id="summary-title">Rencanamu,<br>lebih tergambar</h2><p>Total pinjaman</p><div class="summary-value" id="amount">Rp0</div><dl><div><dt>Tenor pinjaman</dt><dd id="term">Belum diisi</dd></div><div><dt>Penghasilan gabungan / bulan</dt><dd id="income">Belum diisi</dd></div><div class="monthly"><dt>Estimasi cicilan / bulan</dt><dd id="monthly">Belum diisi</dd></div></dl><p class="summary-note">Estimasi dengan bunga 1% per bulan, belum termasuk biaya lain</p><div class="progress-head"><span>Kelengkapan profil</span><span id="completion" role="status" aria-live="polite">0 / 7</span></div><progress id="progress" max="7" value="0" aria-label="Kelengkapan profil">0 / 7</progress></section>
 <section class="info" id="panduan">{{ icon('info') }}<div><h3>Tentang hasil penilaian</h3><p>Hasil dihitung dari profil keuangan dan rencana pinjaman yang kamu masukkan</p><details><summary>Tentang model penilaian</summary><p>Model dilatih dengan data sintetis untuk tugas dan belum divalidasi pada data peminjam nyata</p></details></div></section>
 <div class="side-caption">Hasil penilaian bukan persetujuan kredit</div></aside>
 </div>

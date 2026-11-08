@@ -1,14 +1,13 @@
 {% extends 'base.html' %}
 {% block title %}Hasil penilaian | Kreditly{% endblock %}
 {% block content %}
-<div class="result-heading"><span class="eyebrow">HASIL PENILAIAN</span><h1>Hasil penilaian pinjamanmu</h1><p>Hasil dihitung dari profil keuangan dan nominal yang kamu masukkan</p></div>
+<div class="result-heading"><span class="eyebrow">HASIL PENILAIAN</span><h1>Ini gambaran pengajuanmu</h1><p>Kenali hasilnya sebelum merencanakan langkah berikutnya</p></div>
 <section class="card result {{ '' if approved else 'review' }}" aria-labelledby="result-title">
-<span class="result-icon">{{ icon('check' if approved else 'info') }}</span><span class="eyebrow">LOAN ELIGIBILITY PREDICTION</span>
+<span class="result-icon">{{ icon('check' if approved else 'info') }}</span><span class="eyebrow">HASIL PREDIKSI MODEL</span>
 <h2 id="result-title">{{ 'Diprediksi memenuhi kelayakan' if approved else 'Diprediksi belum memenuhi kelayakan' }}</h2>
-<p>{{ 'Model menempatkan profil keuanganmu dalam kategori layak' if approved else 'Model menempatkan profil keuanganmu dalam kategori belum layak' }}</p>
-<dl class="result-stats"><div><dt>Jumlah pinjaman</dt><dd>Rp{{ amount }}</dd></div><div><dt>Tenor pinjaman</dt><dd>{{ term }} bulan</dd></div><div><dt>Estimasi cicilan / bulan</dt><dd>Rp{{ installment }}</dd></div><div><dt>Rasio seluruh cicilan / penghasilan</dt><dd>{{ debt_ratio }}%</dd></div></dl>
-<div class="result-note">{{ icon('info') }}<p>Sisa penghasilan setelah biaya hidup dan seluruh cicilan sebesar Rp{{ remaining }} per bulan<br>Estimasi memakai asumsi bunga efektif 12% per tahun dan belum termasuk biaya lain</p></div>
+<p>{{ 'Profil yang kamu masukkan termasuk dalam kategori layak menurut model' if approved else 'Profil yang kamu masukkan belum termasuk dalam kategori layak menurut model' }}</p>
+<dl class="result-stats"><div><dt>Jumlah pinjaman</dt><dd>Rp{{ amount }}</dd></div><div><dt>Tenor pinjaman</dt><dd>{{ term }} bulan</dd></div></dl>
+<div class="result-note">{{ icon('info') }}<div><p>Model tugas berbasis data sintetis, hasil bukan persetujuan kredit</p><details><summary>Lihat rincian perhitungan</summary><p>Estimasi cicilan Rp{{ installment }} per bulan dengan asumsi bunga 1% per bulan, belum termasuk biaya lain</p><p>Rasio seluruh cicilan terhadap penghasilan {{ debt_ratio }}%</p><p>Sisa penghasilan setelah biaya hidup dan seluruh cicilan Rp{{ remaining }} per bulan</p></details></div></div>
 <form action="/" method="post" class="edit-form">{% for name, value in values.items() %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}<button class="submit" type="submit">Ubah data penilaian {{ icon('arrow') }}</button></form><a class="start-over" href="/">Mulai penilaian baru</a>
-<p class="model-note">Model tugas berbasis data sintetis, hasil bukan persetujuan kredit</p>
 </section>
 {% endblock %}
