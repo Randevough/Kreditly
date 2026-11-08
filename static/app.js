@@ -1,21 +1,21 @@
 const form = document.querySelector('#loan-form');
 const inputs = [...form.querySelectorAll('input[required], select[required]')];
 const submit = form.querySelector('[type="submit"]');
-const money = value => new Intl.NumberFormat('en-US', {
-  style: 'currency', currency: 'USD', maximumFractionDigits: 0,
+const money = value => new Intl.NumberFormat('id-ID', {
+  style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
 }).format(value);
 const amountValue = name => {
   const value = Number(form.elements.namedItem(name).value);
   return Number.isFinite(value) && value >= 0 ? value : 0;
 };
 function update() {
-  const amount = amountValue('LoanAmount') * 1000;
+  const amount = amountValue('LoanAmount');
   const term = amountValue('Loan_Amount_Term');
   const income = amountValue('ApplicantIncome') + amountValue('CoapplicantIncome');
-  document.querySelector('#amount').textContent = Number.isFinite(amount) ? money(amount) : '—';
-  document.querySelector('#term').textContent = term ? `${term} bulan` : '—';
+  document.querySelector('#amount').textContent = Number.isFinite(amount) ? money(amount) : 'Belum diisi';
+  document.querySelector('#term').textContent = term ? `${term} bulan` : 'Belum dipilih';
   document.querySelector('#income').textContent = money(income);
-  document.querySelector('#monthly').textContent = term && amount && Number.isFinite(amount) ? money(amount / term) : '—';
+  document.querySelector('#monthly').textContent = term && amount && Number.isFinite(amount) ? money(amount / term) : 'Belum dihitung';
   const completed = inputs.filter(input => input.value !== '' && input.validity.valid).length;
   document.querySelector('#completion').textContent = `${completed} / ${inputs.length}`;
   document.querySelector('#progress').value = completed;
@@ -26,8 +26,8 @@ form.addEventListener('input', event => {
 });
 form.addEventListener('change', update);
 document.querySelector('#example').addEventListener('click', () => {
-  const sample = { ApplicantIncome: 5000, CoapplicantIncome: 1500, LoanAmount: 120,
-    Loan_Amount_Term: 360, Credit_History: 1, Self_Employed: 0, Dependents: 1,
+  const sample = { ApplicantIncome: 5000000, CoapplicantIncome: 1500000, LoanAmount: 120000000,
+    Loan_Amount_Term: 60, Credit_History: 1, Self_Employed: 0, Dependents: 1,
     Property_Area: 'Urban', Education: 1, Married: 1, Gender: 1 };
   Object.entries(sample).forEach(([name, value]) => {
     form.elements.namedItem(name).value = value;
@@ -45,7 +45,7 @@ form.addEventListener('reset', event => {
 });
 form.addEventListener('submit', () => {
   submit.disabled = true;
-  submit.querySelector('span').textContent = 'Memproses simulasi…';
+  submit.querySelector('span').textContent = 'Menghitung hasil';
   form.setAttribute('aria-busy', 'true');
 });
 window.addEventListener('pageshow', () => {

@@ -12,23 +12,23 @@
 <html lang="id">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Eksplorasi simulasi kelayakan pinjaman bersama Kreditly. Isi profil, tinjau ringkasan, dan pahami hasil model.">
-<title>{% block title %}Kreditly — Simulasi pinjaman{% endblock %}</title>
+<meta name="description" content="Cek hasil simulasi pinjaman berdasarkan profil dan penghasilanmu">
+<title>{% block title %}Kreditly | Simulasi pinjaman{% endblock %}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 <a class="skip-link" href="#content">Langsung ke konten</a>
 <aside class="sidebar">
-<a class="brand" href="/" aria-label="Kreditly, beranda"><span class="logo" aria-hidden="true">k.</span>kreditly<span class="brand-dot" aria-hidden="true">.</span></a>
+<a class="brand" href="/" aria-label="Kreditly, beranda"><span class="logo" aria-hidden="true">k</span>kreditly</a>
 <div class="workspace">RUANG KERJA</div>
 <a class="nav active" href="/" aria-current="page">{{ icon('grid') }}<span>Simulasi pinjaman</span></a>
-<div class="sidebar-guide"><span class="guide-icon">{{ icon('spark') }}</span><h2>Kenali peluangmu.</h2><p>Mulai dari angka, pahami gambaran pinjamanmu.</p><a href="/#panduan">Tentang simulasi {{ icon('arrow') }}</a></div>
+<div class="sidebar-guide"><span class="guide-icon">{{ icon('spark') }}</span><h2>Coba simulasinya</h2><p>Isi penghasilan dan jumlah pinjaman yang ingin kamu cek</p><a href="/#panduan">Tentang simulasi {{ icon('arrow') }}</a></div>
 <div class="sidebar-bottom">{{ icon('shield') }}<div>Ruang eksplorasi<small>Tanpa pengajuan kredit</small></div></div>
 </aside>
 <div class="main">
-<header><a class="mobile-brand" href="/">kreditly.</a><span class="breadcrumb">Workspace <span>/</span> Simulasi pinjaman</span><span class="demo"><i aria-hidden="true"></i> Mode simulasi</span></header>
+<header><a class="mobile-brand" href="/">kreditly</a><span class="breadcrumb">Workspace <span>/</span> Simulasi pinjaman</span><span class="demo"><i aria-hidden="true"></i> Mode simulasi</span></header>
 <main id="content">{% block content %}{% endblock %}
-<footer><span>Kreditly · Pahami sebelum melangkah.</span><a href="https://github.com/Randevough/Kreditly/blob/main/LICENSE">Lisensi & atribusi</a></footer>
+<footer><span>Kreditly · Simulasi pinjaman</span><a href="https://github.com/Randevough/Kreditly/blob/main/LICENSE">Lisensi & atribusi</a></footer>
 </main>
 </div>
 {% block scripts %}{% endblock %}

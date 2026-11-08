@@ -4,6 +4,8 @@ import pickle
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
+# Fixed simulation assumption, not a live or transaction exchange rate.
+USD_IDR = 18_000
 # Load only the model bundled by this upstream project.
 with (Path(__file__).parent / 'model.pkl').open('rb') as model_file:
     model = pickle.load(model_file)
@@ -28,9 +30,10 @@ def predict():
             if value not in allowed:
                 raise ValueError(name)
             return value
-        income = number('ApplicantIncome')
-        co_income = number('CoapplicantIncome')
-        amount = number('LoanAmount', True)
+        income = number('ApplicantIncome') / USD_IDR
+        co_income = number('CoapplicantIncome') / USD_IDR
+        amount_idr = number('LoanAmount', True)
+        amount = amount_idr / USD_IDR / 1000
         term = float(choice('Loan_Amount_Term', ['12','36','60','120','180','240','360']))
         credit = float(choice('Credit_History', ['0','1']))
         gender = float(choice('Gender', ['0','1']))
@@ -46,11 +49,12 @@ def predict():
                     *[float(area == n) for n in ['Rural','Semiurban','Urban']]]
         prediction = model.predict([features])[0]
         return render_template('result.html', approved=bool(prediction == 1),
-            amount=f'{amount * 1000:,.0f}', term=int(term), values=request.form)
+            amount=f'{amount_idr:,.0f}'.replace(',', '.'),
+            term=int(term), values=request.form)
     except (KeyError, ValueError) as exc:
         field = str(exc.args[0]) if exc.args else ''
         return render_template('index.html', values=request.form, error_field=field,
-            error='Ada data yang belum valid. Periksa nominal dan lengkapi semua pilihan, lalu coba lagi.'), 400
+            error='Periksa nominal dan lengkapi semua pilihan sebelum mencoba lagi'), 400
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=False)
