@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% block title %}Rencana pinjamanmu | Kreditly{% endblock %}
 {% block content %}
-<div class="heading result-page-heading"><div><span class="page-label">RENCANA PINJAMANMU</span><h1>Lebih jelas sebelum meminjam</h1><p>Lihat cicilan, pahami biayanya, dan sesuaikan dengan anggaranmu</p></div><a class="secondary" href="#comparison">Bandingkan rencana {{ icon('arrow') }}</a></div>
+<div class="heading result-page-heading"><div><span class="page-label">Rencana pinjamanmu</span><h1>Lebih jelas <em>sebelum meminjam</em></h1><p>Lihat cicilan, pahami biayanya, dan sesuaikan dengan anggaranmu</p></div><a class="secondary" href="#comparison">Bandingkan rencana {{ icon('arrow') }}</a></div>
 <div class="result-layout borrower-layout">
 <div class="result-main">
 <section class="card payment-card" aria-labelledby="payment-title">
 <div class="payment-card-head"><span class="payment-label">PERKIRAAN CICILAN BULANAN</span><span class="term-note">{{ term }} bulan</span></div>
-<h2 id="payment-title" class="payment-amount">Rp{{ installment }}<span>/ bulan</span></h2>
-<p class="payment-context">Untuk pinjaman Rp{{ amount }} dengan bunga 1% per bulan</p>
+<div class="payment-focus"><h2 id="payment-title" class="payment-amount">Rp{{ installment }}<span>/ bulan</span></h2>
+<p class="payment-context">Untuk pinjaman Rp{{ amount }} dengan bunga 1% per bulan</p></div>
 <div class="payment-meta"><div><span>Jumlah pinjaman</span><strong>Rp{{ amount }}</strong></div><div><span>Perkiraan total bunga</span><strong>Rp{{ total_interest }}</strong></div><div><span>Total pokok + bunga</span><strong>Rp{{ total_payment }}</strong></div></div>
 <div class="decision-strip {{ 'positive' if approved else 'caution' }}">{{ icon('check' if approved else 'info') }}<div><h3 id="result-title">{{ 'Diprediksi memenuhi kelayakan' if approved else 'Diprediksi belum memenuhi kelayakan' }}</h3><p>{{ 'Tinjau sisa penghasilanmu agar rencana ini tetap sesuai kebutuhan bulanan' if approved else 'Coba nominal lebih kecil dan periksa kembali pengeluaran serta cicilan yang berjalan' }}</p></div></div>
 {% if near_boundary %}<p class="boundary-note">Hasil berada dekat batas penilaian sehingga perubahan kecil pada data dapat mengubah prediksi</p>{% endif %}

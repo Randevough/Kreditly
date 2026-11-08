@@ -13,6 +13,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Cek hasil penilaian pinjaman berdasarkan profil dan penghasilanmu">
 <title>{% block title %}Kreditly | Penilaian pinjaman{% endblock %}</title>
+<link rel="preload" href="{{ url_for('static', filename='fonts/ibm-plex-sans-regular.ttf') }}" as="font" type="font/ttf" crossorigin>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -20,6 +21,9 @@
 <aside class="sidebar">
 <a class="brand" href="/" aria-label="Kreditly, beranda"><span class="logo" aria-hidden="true">k</span>kreditly</a>
 <a class="nav active" href="/" {% if request.endpoint == 'home' %}aria-current="page"{% endif %}>{{ icon('grid') }}<span>Penilaian pinjaman</span></a>
+<nav class="section-nav" aria-label="Bagian halaman">
+{% if request.endpoint == 'home' %}<a href="#keuangan">Data keuangan</a><a href="#profil">Pengeluaran & kredit</a>{% elif request.endpoint == 'predict' %}<a href="#costs">Rincian biaya</a><a href="#comparison">Pilihan rencana</a>{% endif %}
+</nav>
 <a class="sidebar-bottom" href="https://github.com/Randevough/Kreditly/blob/main/MODEL_CARD.md">{{ icon('info') }}<span>Tentang model penilaian</span></a>
 </aside>
 <div class="main">
