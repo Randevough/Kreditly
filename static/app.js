@@ -50,7 +50,7 @@ form.addEventListener('submit', () => {
 });
 window.addEventListener('pageshow', () => {
   submit.disabled = false;
-  submit.querySelector('span').textContent = 'Cek kelayakan pinjaman';
+  submit.querySelector('span').textContent = 'Lihat hasil penilaian';
   form.removeAttribute('aria-busy');
   update();
 });

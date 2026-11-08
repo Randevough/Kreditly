@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% block title %}Hasil penilaian | Kreditly{% endblock %}
 {% block content %}
-<div class="result-heading"><span class="eyebrow">HASIL PENILAIAN</span><h1>Ini gambaran pengajuanmu</h1><p>Kenali hasilnya sebelum merencanakan langkah berikutnya</p></div>
+<div class="result-heading"><h1>Ini gambaran pengajuanmu</h1><p>Kenali hasilnya sebelum merencanakan langkah berikutnya</p></div>
 <section class="card result {{ '' if approved else 'review' }}" aria-labelledby="result-title">
-<span class="result-icon">{{ icon('check' if approved else 'info') }}</span><span class="eyebrow">HASIL PREDIKSI MODEL</span>
+<span class="result-icon">{{ icon('check' if approved else 'info') }}</span>
 <h2 id="result-title">{{ 'Diprediksi memenuhi kelayakan' if approved else 'Diprediksi belum memenuhi kelayakan' }}</h2>
 <p>{{ 'Profil yang kamu masukkan termasuk dalam kategori layak menurut model' if approved else 'Profil yang kamu masukkan belum termasuk dalam kategori layak menurut model' }}</p>
 <dl class="result-stats"><div><dt>Jumlah pinjaman</dt><dd>Rp{{ amount }}</dd></div><div><dt>Tenor pinjaman</dt><dd>{{ term }} bulan</dd></div></dl>

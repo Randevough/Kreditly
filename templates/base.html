@@ -5,7 +5,6 @@
 {% elif name == 'check' %}<path d="m5 12 4 4L19 6"/>
 {% elif name == 'shield' %}<path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/>
 {% elif name == 'info' %}<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.1"/>
-{% elif name == 'spark' %}<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/>
 {% else %}<path d="M12 8v5m0 3v.1"/><circle cx="12" cy="12" r="9"/>{% endif %}</svg>
 {%- endmacro %}
 <!doctype html>
@@ -20,13 +19,11 @@
 <a class="skip-link" href="#content">Langsung ke konten</a>
 <aside class="sidebar">
 <a class="brand" href="/" aria-label="Kreditly, beranda"><span class="logo" aria-hidden="true">k</span>kreditly</a>
-<div class="workspace">RUANG KERJA</div>
-<a class="nav active" href="/" aria-current="page">{{ icon('grid') }}<span>Penilaian pinjaman</span></a>
-<div class="sidebar-guide"><span class="guide-icon">{{ icon('spark') }}</span><h2>Kenali peluangmu</h2><p>Mulai dari angka, pahami gambaran pinjamanmu</p><a href="/#panduan">Tentang penilaian {{ icon('arrow') }}</a></div>
-<div class="sidebar-bottom">{{ icon('shield') }}<div>Ruang penilaian<small>Tanpa pengajuan kredit</small></div></div>
+<a class="nav active" href="/" {% if request.endpoint == 'home' %}aria-current="page"{% endif %}>{{ icon('grid') }}<span>Penilaian pinjaman</span></a>
+<a class="sidebar-bottom" href="https://github.com/Randevough/Kreditly/blob/main/MODEL_CARD.md">{{ icon('info') }}<span>Tentang model penilaian</span></a>
 </aside>
 <div class="main">
-<header><a class="mobile-brand" href="/">kreditly</a><span class="breadcrumb">Workspace <span>/</span> Penilaian pinjaman</span><span class="demo"><i aria-hidden="true"></i> Loan Eligibility</span></header>
+<header><a class="mobile-brand" href="/">kreditly</a><nav class="breadcrumb" aria-label="Lokasi halaman"><a href="/" {% if request.endpoint == 'home' %}aria-current="page"{% endif %}>Penilaian pinjaman</a>{% if request.endpoint == 'predict' %}<span aria-hidden="true">/</span><span aria-current="page">Hasil penilaian</span>{% endif %}</nav><a class="help-link" href="/#panduan">Panduan pengisian</a></header>
 <main id="content">{% block content %}{% endblock %}
 <footer><span>Kreditly · Penilaian pinjaman</span><a href="https://github.com/Randevough/Kreditly/blob/main/LICENSE">Lisensi & atribusi</a></footer>
 </main>
