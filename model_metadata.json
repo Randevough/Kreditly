@@ -1,0 +1,115 @@
+{
+  "model_id": "kreditly-idr-synthetic-v1",
+  "data_source": "synthetic",
+  "currency": "IDR",
+  "seed": 42,
+  "sklearn_version": "1.7.2",
+  "feature_names": [
+    "CombinedIncomeIDR",
+    "ExistingInstallmentsIDR",
+    "LivingExpensesIDR",
+    "LoanAmountIDR",
+    "TermMonths",
+    "CreditHistory",
+    "InstallmentIDR",
+    "DebtToIncomeRatio",
+    "DisposableIncomeIDR"
+  ],
+  "annual_interest_assumption": 0.12,
+  "decision_threshold": 0.5,
+  "split": {
+    "train": 12000,
+    "calibration": 4000,
+    "test": 4000
+  },
+  "positive_rate": 0.25975,
+  "base_test_metrics": {
+    "accuracy": 0.9405,
+    "precision": 0.8969276511397423,
+    "recall": 0.8710298363811357,
+    "roc_auc": 0.9820788635319793,
+    "brier_score": 0.04554846717364755,
+    "log_loss": 0.15554447161254206,
+    "confusion_matrix": [
+      [
+        2857,
+        104
+      ],
+      [
+        134,
+        905
+      ]
+    ],
+    "calibration_curve": {
+      "mean_probability": [
+        0.0002253926578681113,
+        0.0006796255758616269,
+        0.002150934241094919,
+        0.005492478945781919,
+        0.015118544146294962,
+        0.05346426721879,
+        0.17450601960975246,
+        0.502945020461226,
+        0.8392941962371543,
+        0.9724003828179059
+      ],
+      "positive_fraction": [
+        0.0,
+        0.0025,
+        0.0,
+        0.0,
+        0.0075,
+        0.03,
+        0.1175,
+        0.525,
+        0.9175,
+        0.9975
+      ]
+    }
+  },
+  "calibrated_test_metrics": {
+    "accuracy": 0.94025,
+    "precision": 0.9016064257028112,
+    "recall": 0.8642925890279115,
+    "roc_auc": 0.9820788635319793,
+    "brier_score": 0.045752447084081396,
+    "log_loss": 0.1593074675731231,
+    "confusion_matrix": [
+      [
+        2863,
+        98
+      ],
+      [
+        141,
+        898
+      ]
+    ],
+    "calibration_curve": {
+      "mean_probability": [
+        0.014638110412414996,
+        0.014692094614267199,
+        0.014868460466509269,
+        0.01527697391848134,
+        0.016525867464804018,
+        0.022824971289413763,
+        0.06405951449074182,
+        0.48563390526945605,
+        0.9294243723797182,
+        0.9774237099378921
+      ],
+      "positive_fraction": [
+        0.0,
+        0.0025,
+        0.0,
+        0.0,
+        0.0075,
+        0.03,
+        0.1175,
+        0.525,
+        0.9175,
+        0.9975
+      ]
+    }
+  },
+  "limitation": "All metrics measure agreement with generated hypothetical labels, not real Indonesian lending outcomes"
+}

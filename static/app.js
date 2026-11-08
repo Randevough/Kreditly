@@ -15,7 +15,7 @@ function update() {
   document.querySelector('#amount').textContent = Number.isFinite(amount) ? money(amount) : 'Belum diisi';
   document.querySelector('#term').textContent = term ? `${term} bulan` : 'Belum dipilih';
   document.querySelector('#income').textContent = money(income);
-  document.querySelector('#monthly').textContent = term && amount && Number.isFinite(amount) ? money(amount / term) : 'Belum dihitung';
+  document.querySelector('#monthly').textContent = term && amount && Number.isFinite(amount) ? money(amount * .01 / (1 - (1.01) ** -term)) : 'Belum dihitung';
   const completed = inputs.filter(input => input.value !== '' && input.validity.valid).length;
   document.querySelector('#completion').textContent = `${completed} / ${inputs.length}`;
   document.querySelector('#progress').value = completed;
@@ -26,9 +26,9 @@ form.addEventListener('input', event => {
 });
 form.addEventListener('change', update);
 document.querySelector('#example').addEventListener('click', () => {
-  const sample = { ApplicantIncome: 5000000, CoapplicantIncome: 1500000, LoanAmount: 120000000,
-    Loan_Amount_Term: 60, Credit_History: 1, Self_Employed: 0, Dependents: 1,
-    Property_Area: 'Urban', Education: 1, Married: 1, Gender: 1 };
+  const sample = { ApplicantIncome: 8000000, CoapplicantIncome: 2000000,
+    LoanAmount: 50000000, Loan_Amount_Term: 36, ExistingInstallments: 500000,
+    LivingExpenses: 3500000, Credit_History: 1 };
   Object.entries(sample).forEach(([name, value]) => {
     form.elements.namedItem(name).value = value;
     form.elements.namedItem(name).removeAttribute('aria-invalid');
@@ -50,7 +50,7 @@ form.addEventListener('submit', () => {
 });
 window.addEventListener('pageshow', () => {
   submit.disabled = false;
-  submit.querySelector('span').textContent = 'Lihat hasil simulasi';
+  submit.querySelector('span').textContent = 'Cek kelayakan pinjaman';
   form.removeAttribute('aria-busy');
   update();
 });

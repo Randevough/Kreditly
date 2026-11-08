@@ -1,6 +1,14 @@
 {% extends 'base.html' %}
-{% block title %}Hasil simulasi | Kreditly{% endblock %}
+{% block title %}Hasil penilaian | Kreditly{% endblock %}
 {% block content %}
-<div class="result-heading"><span class="eyebrow">HASIL SIMULASI</span><h1>Hasil simulasi pinjamanmu</h1><p>Hasil dihitung dari profil dan nominal yang kamu masukkan</p></div>
-<section class="card result {{ '' if approved else 'review' }}" aria-labelledby="result-title"><span class="result-icon">{{ icon('check' if approved else 'info') }}</span><span class="eyebrow">HASIL PREDIKSI MODEL</span><h2 id="result-title">{{ 'Diprediksi memenuhi kelayakan' if approved else 'Diprediksi belum memenuhi kelayakan' }}</h2><p>{{ 'Model menempatkan profilmu dalam kategori layak' if approved else 'Model menempatkan profilmu dalam kategori belum layak' }}</p><dl class="result-stats"><div><dt>Jumlah pinjaman</dt><dd>Rp{{ amount }}</dd></div><div><dt>Tenor pinjaman</dt><dd>{{ term }} bulan</dd></div></dl><div class="result-note">{{ icon('info') }}<p>Model belum dikalibrasi untuk Indonesia sehingga hasil ini tidak menggantikan penilaian lembaga keuangan</p></div><form action="/" method="post" class="edit-form">{% for name, value in values.items() %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}<button class="submit" type="submit">Ubah data simulasi {{ icon('arrow') }}</button></form><a class="start-over" href="/">Mulai simulasi baru</a></section>
+<div class="result-heading"><span class="eyebrow">HASIL PENILAIAN</span><h1>Hasil penilaian pinjamanmu</h1><p>Hasil dihitung dari profil keuangan dan nominal yang kamu masukkan</p></div>
+<section class="card result {{ '' if approved else 'review' }}" aria-labelledby="result-title">
+<span class="result-icon">{{ icon('check' if approved else 'info') }}</span><span class="eyebrow">LOAN ELIGIBILITY PREDICTION</span>
+<h2 id="result-title">{{ 'Diprediksi memenuhi kelayakan' if approved else 'Diprediksi belum memenuhi kelayakan' }}</h2>
+<p>{{ 'Model menempatkan profil keuanganmu dalam kategori layak' if approved else 'Model menempatkan profil keuanganmu dalam kategori belum layak' }}</p>
+<dl class="result-stats"><div><dt>Jumlah pinjaman</dt><dd>Rp{{ amount }}</dd></div><div><dt>Tenor pinjaman</dt><dd>{{ term }} bulan</dd></div><div><dt>Estimasi cicilan / bulan</dt><dd>Rp{{ installment }}</dd></div><div><dt>Rasio seluruh cicilan / penghasilan</dt><dd>{{ debt_ratio }}%</dd></div></dl>
+<div class="result-note">{{ icon('info') }}<p>Sisa penghasilan setelah biaya hidup dan seluruh cicilan sebesar Rp{{ remaining }} per bulan<br>Estimasi memakai asumsi bunga efektif 12% per tahun dan belum termasuk biaya lain</p></div>
+<form action="/" method="post" class="edit-form">{% for name, value in values.items() %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}<button class="submit" type="submit">Ubah data penilaian {{ icon('arrow') }}</button></form><a class="start-over" href="/">Mulai penilaian baru</a>
+<p class="model-note">Model tugas berbasis data sintetis, hasil bukan persetujuan kredit</p>
+</section>
 {% endblock %}

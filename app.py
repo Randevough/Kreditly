@@ -1,60 +1,63 @@
 from pathlib import Path
-import math
 import pickle
 from flask import Flask, render_template, request
 
+from loan_model import FEATURE_NAMES, INPUT_LIMITS, TERMS, feature_row, financials
+import math
+
 app = Flask(__name__)
-# Fixed simulation assumption, not a live or transaction exchange rate.
-USD_IDR = 18_000
-# Load only the model bundled by this upstream project.
+# Only load the artifact produced by this repository's train_model.py
 with (Path(__file__).parent / 'model.pkl').open('rb') as model_file:
-    model = pickle.load(model_file)
+    artifact = pickle.load(model_file)
+model = artifact['model']
+metadata = artifact['metadata']
+if metadata['feature_names'] != FEATURE_NAMES or metadata['currency'] != 'IDR':
+    raise RuntimeError('Model input contract does not match the IDR application')
+
+
+def rupiah(value):
+    return f'{value:,.0f}'.replace(',', '.')
+
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
     return render_template('index.html', values=request.form)
 
+
 @app.post('/predict')
 def predict():
     try:
-        def number(name, positive=False):
+        data = {}
+        for name, (minimum, maximum) in INPUT_LIMITS.items():
             try:
                 value = float(request.form[name])
             except ValueError:
                 raise ValueError(name) from None
-            if not math.isfinite(value) or value < 0 or (positive and value == 0):
+            if not math.isfinite(value) or not minimum <= value <= maximum:
                 raise ValueError(name)
-            return value
-        def choice(name, allowed):
+            data[name] = value
+        for name, allowed in [('Loan_Amount_Term', TERMS), ('Credit_History', (0, 1, 2))]:
             value = request.form[name]
-            if value not in allowed:
+            if value not in [str(option) for option in allowed]:
                 raise ValueError(name)
-            return value
-        income = number('ApplicantIncome') / USD_IDR
-        co_income = number('CoapplicantIncome') / USD_IDR
-        amount_idr = number('LoanAmount', True)
-        amount = amount_idr / USD_IDR / 1000
-        term = float(choice('Loan_Amount_Term', ['12','36','60','120','180','240','360']))
-        credit = float(choice('Credit_History', ['0','1']))
-        gender = float(choice('Gender', ['0','1']))
-        married = float(choice('Married', ['0','1']))
-        dependents = choice('Dependents', ['0','1','2','3+'])
-        education = float(choice('Education', ['0','1']))
-        employed = float(choice('Self_Employed', ['0','1']))
-        area = choice('Property_Area', ['Rural','Semiurban','Urban'])
-        # Preserve upstream model's exact 16-feature order and input units.
-        features = [income, co_income, amount, term, credit, gender, married,
-                    *[float(dependents == n) for n in ['0','1','2','3+']],
-                    education, employed,
-                    *[float(area == n) for n in ['Rural','Semiurban','Urban']]]
-        prediction = model.predict([features])[0]
-        return render_template('result.html', approved=bool(prediction == 1),
-            amount=f'{amount_idr:,.0f}'.replace(',', '.'),
-            term=int(term), values=request.form)
+            data[name] = int(value)
+        details = financials(data)
+        probability = float(model.predict_proba([feature_row(data)])[0][1])
+        return render_template(
+            'result.html', approved=probability >= metadata['decision_threshold'],
+            amount=rupiah(data['LoanAmount']), term=data['Loan_Amount_Term'],
+            installment=rupiah(details['installment']),
+            remaining=rupiah(details['remaining']),
+            debt_ratio=f"{details['debt_ratio'] * 100:.1f}".replace('.', ','),
+            values=request.form,
+        )
     except (KeyError, ValueError) as exc:
         field = str(exc.args[0]) if exc.args else ''
-        return render_template('index.html', values=request.form, error_field=field,
-            error='Periksa nominal dan lengkapi semua pilihan sebelum mencoba lagi'), 400
+        return render_template(
+            'index.html', values=request.form, error_field=field,
+            error='Periksa nominal, batas pengisian, dan pilihan yang belum lengkap',
+        ), 400
+
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=False)
