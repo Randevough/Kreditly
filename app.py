@@ -11,7 +11,7 @@ with (Path(__file__).parent / 'model.pkl').open('rb') as model_file:
     artifact = pickle.load(model_file)
 model = artifact['model']
 metadata = artifact['metadata']
-if metadata['feature_names'] != FEATURE_NAMES or metadata['currency'] != 'IDR':
+if metadata['feature_names'] != FEATURE_NAMES or metadata['currency'] != 'IDR' or metadata['model_id'] != 'kreditly-idr-synthetic-v2':
     raise RuntimeError('Model input contract does not match the IDR application')
 
 
@@ -43,12 +43,40 @@ def predict():
             data[name] = int(value)
         details = financials(data)
         probability = float(model.predict_proba([feature_row(data)])[0][1])
+        credit_labels = {0: 'Pernah menunggak', 1: 'Pembayaran lancar', 2: 'Belum punya riwayat'}
+        # Compare explicit input changes, not causal explanations of the classifier
+        plans = [(data['LoanAmount'], data['Loan_Amount_Term'], 'Rencana saat ini')]
+        lower_amount = max(INPUT_LIMITS['LoanAmount'][0], int(data['LoanAmount'] * .8 // 1000) * 1000)
+        if lower_amount < data['LoanAmount']:
+            plans.append((lower_amount, data['Loan_Amount_Term'], 'Nominal lebih kecil'))
+        longer_terms = [term for term in TERMS if term > data['Loan_Amount_Term']]
+        plans.extend((data['LoanAmount'], term, f'Tenor {term} bulan') for term in longer_terms[:2])
+        comparisons = []
+        for amount, term, label in plans:
+            plan = dict(data, LoanAmount=amount, Loan_Amount_Term=term)
+            plan_details = financials(plan)
+            plan_probability = float(model.predict_proba([feature_row(plan)])[0][1])
+            comparisons.append({
+                'label': label, 'amount': rupiah(amount), 'term': term,
+                'installment': rupiah(plan_details['installment']),
+                'total': rupiah(plan_details['installment'] * term),
+                'approved': plan_probability >= metadata['decision_threshold'],
+                'values': {**request.form, 'LoanAmount': str(int(amount)), 'Loan_Amount_Term': str(term)},
+            })
+        expenses = [data['LivingExpenses'], data['ExistingInstallments'], details['installment'],
+                    max(0, details['remaining'])]
+        denominator = max(details['income'], sum(expenses))
+        shares = [value / denominator * 100 for value in expenses]
         return render_template(
             'result.html', approved=probability >= metadata['decision_threshold'],
             amount=rupiah(data['LoanAmount']), term=data['Loan_Amount_Term'],
             installment=rupiah(details['installment']),
-            remaining=rupiah(details['remaining']),
+            remaining=rupiah(abs(details['remaining'])), negative_balance=details['remaining'] < 0,
             debt_ratio=f"{details['debt_ratio'] * 100:.1f}".replace('.', ','),
+            income=rupiah(details['income']), living=rupiah(data['LivingExpenses']),
+            existing=rupiah(data['ExistingInstallments']), credit_label=credit_labels[data['Credit_History']],
+            shares=shares, comparisons=comparisons,
+            near_boundary=abs(probability - metadata['decision_threshold']) < .1,
             values=request.form,
         )
     except (KeyError, ValueError) as exc:

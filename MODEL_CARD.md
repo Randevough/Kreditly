@@ -1,76 +1,80 @@
-# Model Card: Kreditly IDR
+# Model Card: Kreditly IDR v2
 
-## Tujuan
+## Tujuan dan asal data
 
-Model klasifikasi kelayakan pinjaman pribadi berformat rupiah untuk tugas
-Versi `kreditly-idr-synthetic-v1` menggunakan Random Forest dan kalibrasi sigmoid
-Keputusan aplikasi memakai ambang probabilitas 0,5 tanpa menampilkan probabilitas sebagai peluang persetujuan nyata
+Model penilaian pinjaman pribadi untuk tugas, seluruh nominal menggunakan rupiah
+Versi `kreditly-idr-synthetic-v2` memakai `logistic_regression_sigmoid`
+Semua 20.000 profil dan label berasal dari generator sintetis seed 42
+Tidak ada data peminjam Indonesia nyata atau kebijakan pemberi pinjaman dalam dataset
 
-## Asal data
+Label diambil dari distribusi Bernoulli dengan probabilitas logistik hipotetis
+Rasio cicilan, sisa penghasilan relatif, dan riwayat kredit membentuk probabilitas generator
+Batas acuan 40%, penyangga sisa 15%, dan koefisien pada generator adalah asumsi tugas
+Pemilihan fitur mengikuti mekanisme label sintetis yang diketahui, sehingga model linear logistik cocok untuk data ini
+Hasil ini tidak membuktikan bahwa hubungan yang sama berlaku di dunia nyata
 
-Seluruh 20,000 baris berasal dari generator sintetis seed 42
-Distribusi penghasilan, nominal, biaya, dan riwayat kredit dipilih untuk membentuk contoh pembelajaran, bukan diestimasi dari populasi Indonesia
-Tidak ada data observasi peminjam atau hubungan dengan pemberi pinjaman
+## Fitur dan konsistensi
 
-Label `Eligible` diambil dari distribusi Bernoulli dengan probabilitas logistik hipotetis
-Logit menggabungkan rasio cicilan terhadap penghasilan, sisa penghasilan relatif, dan kategori riwayat kredit
-Koefisien, batas rasio 40%, penyangga sisa 15%, dan efek kategori kredit merupakan asumsi penulis untuk tugas, bukan kebijakan regulator atau lembaga keuangan
-Kode lengkap mekanisme label tersedia di `generate_data` dalam `train_model.py`
-
-## Kontrak fitur
-
-Sembilan fitur dipakai dalam urutan yang sama saat training dan inference
-
-| Fitur | Satuan |
+| Fitur model | Definisi |
 | --- | --- |
-| Penghasilan gabungan | Rupiah per bulan |
-| Cicilan berjalan | Rupiah per bulan |
-| Biaya hidup | Rupiah per bulan |
-| Jumlah pinjaman | Rupiah |
-| Tenor | Bulan |
-| Riwayat kredit | 0 menunggak, 1 lancar, 2 belum punya riwayat |
-| Estimasi cicilan baru | Rupiah per bulan |
-| Rasio seluruh cicilan terhadap penghasilan | Pecahan |
-| Sisa penghasilan setelah biaya dan cicilan | Rupiah per bulan |
+| DebtToIncomeRatio | Seluruh cicilan dibagi penghasilan gabungan |
+| DisposableIncomeShare | Sisa setelah biaya hidup dan cicilan dibagi penghasilan gabungan |
+| CreditArrears | 1 jika pernah menunggak, selain itu 0 |
+| CreditHistoryClear | 1 jika riwayat lancar, selain itu 0 |
 
-Cicilan anuitas memakai suku bunga bulanan 0,01 sebagai asumsi tugas
-Data yang digunakan tidak mencakup biaya administrasi, asuransi, agunan, atau histori pembayaran rinci
+Riwayat baru diwakili oleh kedua indikator kredit bernilai 0
+Penghasilan dan nominal mentah tetap diperlukan untuk menghitung cicilan dan rasio
+Gender, pernikahan, pendidikan, dan lokasi tidak digunakan
+Bunga 1% per bulan atas saldo berjalan merupakan asumsi tugas, tanpa biaya lain
 
-## Pembagian dan evaluasi
+Arah model diperiksa agar peningkatan pinjaman, cicilan lain, atau biaya hidup tidak meningkatkan skor kelayakan
+Peningkatan penghasilan atau tenor tidak menurunkan skor dalam kondisi input lainnya tetap
+Tenor lebih panjang menambah total pembayaran walaupun cicilan bulanan turun
+Pemeriksaan ini adalah kontrak perilaku untuk mekanisme tugas, bukan rekomendasi kebijakan kredit
 
-Training 12.000 baris, kalibrasi 4.000 baris, test 4.000 baris
-Model dasar dibekukan sebelum kalibrasi sehingga tidak dilatih ulang dengan data kalibrasi
-Data test hanya dipakai untuk menghitung hasil evaluasi setelah pipeline ditetapkan
+## Pembagian dan pemilihan model
 
-| Metrik pada test sintetis | Model dasar | Setelah kalibrasi sigmoid |
+Train 12.000, calibration 2.000, validation 2.000, test 4.000
+Model dasar dilatih pada train saja, calibrator sigmoid memakai calibration saja
+Empat kandidat dibandingkan dengan log loss pada validation
+Test tidak dipakai untuk memilih kandidat atau ambang klasifikasi
+Split test yang sama pernah dipakai mengevaluasi v1 sehingga perbandingan antaversi bersifat berulang
+Sesudah pemilihan, audit tambahan memakai 5.000 profil baru dari seed 2026
+Audit tidak digunakan untuk memilih atau menyesuaikan model
+
+| Kandidat pada validation | Akurasi | Brier score | Log loss | Pilihan |
+| --- | ---: | ---: | ---: | --- |
+| logistic_regression | 0.93800 | 0.04370 | 0.14020 |  |
+| logistic_regression_sigmoid | 0.93750 | 0.04368 | 0.13972 | Dipilih |
+| random_forest_monotonic | 0.91750 | 0.06832 | 0.22989 |  |
+| random_forest_monotonic_sigmoid | 0.91800 | 0.06257 | 0.20494 |  |
+
+## Evaluasi model terpilih
+
+| Metrik | Test 4.000 | Audit 5.000 |
 | --- | ---: | ---: |
-| Akurasi | 0.94050 | 0.94025 |
-| Precision kelas layak | 0.89693 | 0.90161 |
-| Recall kelas layak | 0.87103 | 0.86429 |
-| ROC AUC | 0.98208 | 0.98208 |
-| Brier score | 0.04555 | 0.04575 |
-| Log loss | 0.15554 | 0.15931 |
+| Akurasi | 0.94525 | 0.94020 |
+| Precision layak | 0.90196 | 0.88533 |
+| Recall layak | 0.88547 | 0.89130 |
+| ROC AUC | 0.98641 | 0.98361 |
+| Brier score | 0.03996 | 0.04419 |
+| Log loss | 0.13113 | 0.14481 |
 
-Pada split ini kalibrasi sigmoid tidak memperbaiki Brier score atau log loss dibanding model dasar
-Tahap kalibrasi tetap didokumentasikan sebagai eksperimen, tanpa klaim bahwa hasilnya membaik
-Matriks kebingungan model terkalibrasi adalah TN=2863, FP=98, FN=141, TP=898
-Kurva kalibrasi per kelompok probabilitas tersedia di `model_metadata.json`
+Baseline yang selalu memilih kelas mayoritas mendapat akurasi 74.025% pada test
+Matriks kebingungan test dalam urutan TN, FP, FN, TP: 2861, 100, 119, 920
+Kurva kalibrasi disimpan dalam metadata, Brier score sendiri bukan ukuran kalibrasi murni
+Ambang keputusan tetap 0,5 dan probabilitas tidak ditampilkan sebagai peluang persetujuan nyata
 
-## Batas interpretasi
+## Batasan dan reproduksi
 
-Akurasi 94.025% hanya mengukur kesesuaian model dengan label hipotetis generator
-Nilai ini bukan estimasi performa pada aplikasi kredit nyata di Indonesia
-Konversi ke rupiah dan pemilihan kisaran nominal tidak menjadikan model terkalibrasi pada populasi Indonesia
-Input di luar rentang aplikasi ditolak, tetapi rentang tersebut pun tidak menjamin representativitas
+Semua metrik hanya mengukur kesesuaian pada label hipotetis sintetis
+Kalibrasi terhadap label sintetis bukan kalibrasi pada peminjam Indonesia
+Indikator keuangan di UI adalah ringkasan input, bukan atribusi sebab akibat dari classifier
+Rencana alternatif dihitung ulang memakai model yang sama, perubahan nominal atau tenor tidak menjamin persetujuan
+Data observasi berizin dan evaluasi terpisah menurut waktu serta peminjam tetap diperlukan untuk pemakaian nyata
 
-Validasi nyata memerlukan data berizin dengan definisi label, periode pengamatan, dan hasil pinjaman yang jelas
-Sesudah tersedia, evaluasi harus mencakup pemisahan waktu dan peminjam, kalibrasi di data terpisah, pemeriksaan kesalahan antarkelompok, dan pemantauan perubahan distribusi
+Gunakan Python 3.12 dan versi dependensi pada requirements.txt
+Jalankan `python train_model.py` untuk membuat model, dataset, metadata, dan laporan ini
+Jalankan `python -m unittest discover -s tests -v` untuk memeriksa aplikasi dan kontrak perilaku
 
-## Reproduksi
-
-Gunakan Python 3.12 dan versi dependensi pada `requirements.txt`
-Jalankan `python train_model.py` kemudian `python -m unittest discover -s tests -v`
-Arsip upstream pada `legacy/` tidak digunakan untuk melatih model aktif
-
-Metode kalibrasi mengikuti API resmi scikit-learn
-[Probability calibration](https://scikit-learn.org/stable/modules/calibration.html)
+Referensi API: [Logistic Regression](https://scikit-learn.org/1.7/modules/generated/sklearn.linear_model.LogisticRegression.html), [Random Forest](https://scikit-learn.org/1.7/modules/generated/sklearn.ensemble.RandomForestClassifier.html), [Probability calibration](https://scikit-learn.org/stable/modules/calibration.html)

@@ -11,9 +11,7 @@ INPUT_LIMITS = {
     'LoanAmount': (1_000_000, 500_000_000),
 }
 FEATURE_NAMES = [
-    'CombinedIncomeIDR', 'ExistingInstallmentsIDR', 'LivingExpensesIDR',
-    'LoanAmountIDR', 'TermMonths', 'CreditHistory', 'InstallmentIDR',
-    'DebtToIncomeRatio', 'DisposableIncomeIDR',
+    'DebtToIncomeRatio', 'DisposableIncomeShare', 'CreditArrears', 'CreditHistoryClear',
 ]
 
 
@@ -35,6 +33,6 @@ def financials(data):
 
 def feature_row(data):
     details = financials(data)
-    return [details['income'], data['ExistingInstallments'], data['LivingExpenses'],
-            data['LoanAmount'], data['Loan_Amount_Term'], data['Credit_History'],
-            details['installment'], details['debt_ratio'], details['remaining']]
+    # Ratios make identical financial burdens comparable across income levels
+    return [details['debt_ratio'], details['remaining'] / details['income'],
+            float(data['Credit_History'] == 0), float(data['Credit_History'] == 1)]

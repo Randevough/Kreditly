@@ -101,6 +101,30 @@ class FormTests(unittest.TestCase):
         self.assertNotIn(b'<script>alert(1)</script>', response.data)
         self.assertIn(b'value="50000000"', response.data)
 
+    def test_plan_comparison_reuses_model_and_inputs(self):
+        response = self.client.post('/predict', data=SAMPLE)
+        self.assertEqual(response.status_code, 200)
+        text = response.get_data(as_text=True)
+        self.assertIn('Nominal lebih kecil', text)
+        self.assertIn('Rp40.000.000', text)
+        self.assertIn('Tenor 48 bulan', text)
+        self.assertIn('name="LivingExpenses" value="3500000"', text)
+        self.assertIn('Total pembayaran', text)
+        self.assertIn('Rp1.660.715', text)
+
+    def test_minimum_amount_maximum_term_has_no_duplicate_plans(self):
+        response = self.client.post('/predict', data=dict(SAMPLE, LoanAmount='1000000', Loan_Amount_Term='60'))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('Nominal lebih kecil', response.get_data(as_text=True))
+        self.assertIn('1 rencana', response.get_data(as_text=True))
+
+    def test_overspending_result_reports_shortfall(self):
+        response = self.client.post('/predict', data=dict(SAMPLE, LivingExpenses='20000000'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('melebihi penghasilan', response.get_data(as_text=True))
+        self.assertIn('-Rp', response.get_data(as_text=True))
+        self.assertNotIn('Rp-', response.get_data(as_text=True))
+
     def test_copy_has_no_dollar_simulation_or_ending_dots(self):
         for response in [self.client.get('/'), self.client.post('/predict', data=SAMPLE),
                          self.client.post('/predict', data=dict(SAMPLE, LoanAmount='-1'))]:
@@ -121,8 +145,36 @@ class ModelTests(unittest.TestCase):
         self.assertAlmostEqual(details['debt_ratio'], .21607154906425588)
         self.assertAlmostEqual(details['remaining'], 4_339_284.509357441, places=2)
         features = feature_row(data)
-        self.assertEqual(features[:6], [10_000_000, 500_000, 3_500_000, 50_000_000, 36, 1])
+        self.assertAlmostEqual(features[0], details['debt_ratio'])
+        self.assertAlmostEqual(features[1], details['remaining'] / details['income'])
+        self.assertEqual(features[2:], [0., 1.])
         self.assertEqual(len(features), len(FEATURE_NAMES))
+
+    def test_financial_directions_are_consistent(self):
+        data = {key: float(value) for key, value in SAMPLE.items()}
+        def score(**changes):
+            return model.predict_proba([feature_row(dict(data, **changes))])[0][1]
+        # These are behavioral contracts, not accuracy claims about real borrowers
+        for field, values, increasing in [
+            ('LoanAmount', [10_000_000, 25_000_000, 50_000_000, 100_000_000, 200_000_000], False),
+            ('ExistingInstallments', [0, 500_000, 1_500_000, 3_000_000], False),
+            ('LivingExpenses', [1_000_000, 3_000_000, 5_000_000, 8_000_000], False),
+            ('ApplicantIncome', [2_000_000, 5_000_000, 8_000_000, 15_000_000, 30_000_000], True),
+            ('Loan_Amount_Term', [6, 12, 24, 36, 48, 60], True),
+        ]:
+            with self.subTest(field=field):
+                scores = [score(**{field: value}) for value in values]
+                for before, after in zip(scores, scores[1:]):
+                    self.assertGreaterEqual(after + 1e-10, before) if increasing else self.assertLessEqual(after, before + 1e-10)
+        self.assertLessEqual(score(Credit_History=0), score(Credit_History=2))
+        self.assertLessEqual(score(Credit_History=2), score(Credit_History=1))
+
+    def test_selected_on_validation_not_test(self):
+        rows = metadata['validation_comparison']
+        self.assertEqual(metadata['selected_model'], min(rows, key=lambda name: rows[name]['log_loss']))
+        self.assertEqual(metadata['split'], {'train': 12000, 'calibration': 2000, 'validation': 2000, 'test': 4000})
+        self.assertEqual(metadata['audit']['rows'], 5000)
+        self.assertNotEqual(metadata['audit']['seed'], metadata['seed'])
 
     def test_artifact_contract_and_provenance(self):
         self.assertEqual(metadata['currency'], 'IDR')
