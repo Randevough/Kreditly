@@ -30,12 +30,24 @@ export function formatEdit(raw, cursor, inputType = '', inserted = null) {
   return {value, caret};
 }
 
+export function parseInterestPercent(raw, maximum = 3) {
+  const text = String(raw).trim();
+  if (!/^[0-9]{1,2}(?:[.,][0-9]{1,2})?$/.test(text)) return null;
+  const value = Number(text.replace(',', '.'));
+  return value >= 0 && value <= maximum ? value : null;
+}
+
+export function installmentFactor(term, rate) {
+  return rate === 0 ? 1 / term : rate / -Math.expm1(-term * Math.log1p(rate));
+}
+
 export function calculateBudget(values, config) {
   const income = values.ApplicantIncome + values.CoapplicantIncome;
   const term = values.Loan_Amount_Term;
   if (!(income > 0) || !(term > 0)) return null;
-  const rate = config.monthlyRate;
-  const factor = rate / (1 - (1 + rate) ** -term);
+  const percent = values.MonthlyInterestPercent ?? config.monthlyRate * 100;
+  if (!Number.isFinite(percent) || percent < 0 || percent > (config.maxInterestPercent ?? 3)) return null;
+  const factor = installmentFactor(term, percent / 100);
   const payment = values.LoanAmount * factor;
   const reserve = income * config.reserveShare;
   const monthlyBudget = Math.max(0, Math.min(income * config.maxDebtShare - values.ExistingInstallments,
@@ -46,5 +58,5 @@ export function calculateBudget(values, config) {
   return {income, payment, reserve, monthlyBudget, capacity,
     ratio: (values.ExistingInstallments + payment) / income,
     remaining: income - values.LivingExpenses - values.ExistingInstallments - payment,
-    total: payment * term, interest: payment * term - values.LoanAmount};
+    total: payment * term, interest: Math.max(0, payment * term - values.LoanAmount)};
 }

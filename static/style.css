@@ -153,3 +153,5 @@ fieldset[id]{scroll-margin-top:24px}.input-wrap>span:first-child{font-size:12px;
 .capacity-value{color:var(--green)}.capacity-card h2{font-weight:600}.capacity-label,.summary-kicker{font-size:10px;letter-spacing:.8px}
 .payment-card .edit-form .submit{background:white;color:var(--green);border:1px solid #b8c6c6}.payment-card .edit-form .submit:hover{background:var(--accent-wash);border-color:var(--green)}
 .plan-choice dl{border-top:1px solid var(--line);padding-top:8px}.plan-choice h3{line-height:1.5}.plan-choice-head{flex-wrap:wrap}.rate-note{border:1px solid var(--line);border-radius:4px;padding:7px 10px;background:var(--surface-subtle)}
+
+.interest-method{align-self:center;padding:8px 0}.interest-method strong{font-size:13px;font-weight:600}.interest-method p{font-size:12px;margin:6px 0 0}.input-wrap>input:first-child{font-size:16px;font-weight:400;color:var(--ink)}

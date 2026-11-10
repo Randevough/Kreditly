@@ -40,7 +40,11 @@ Angka desimal, nilai negatif, dan susunan pemisah yang tidak valid ditolak di br
 - Riwayat kredit lancar, pernah menunggak, atau belum punya riwayat
 
 Hasil berupa prediksi layak atau belum layak, estimasi cicilan, rasio seluruh cicilan terhadap penghasilan, dan sisa penghasilan setelah kebutuhan serta cicilan
-Estimasi cicilan menggunakan anuitas dengan asumsi bunga 1% per bulan atas saldo berjalan, tanpa biaya tambahan
+Estimasi cicilan menggunakan anuitas atas sisa pokok dengan cicilan tetap, tanpa biaya tambahan
+Bunga dapat diubah dari 0 sampai 3% per bulan dengan nilai awal 1%, maksimal dua angka desimal
+Input `0,75` atau `0.75` berarti bunga 0,75% per bulan, bukan 75%
+Bunga 0% dihitung sebagai pokok dibagi tenor, dengan total bunga nol
+Rentang 0–3% adalah batas input aplikasi, bukan batas regulasi atau rekomendasi tarif
 Bunga tersebut merupakan asumsi tugas, bukan tarif produk lembaga keuangan
 
 Nominal diproses langsung dalam rupiah, tanpa konversi dolar
@@ -69,7 +73,7 @@ Penjelasan hasil merangkum sisa anggaran, rasio cicilan, dan riwayat yang dimasu
 
 Tiga contoh profil tersedia di formulir: pengeluaran terjaga, cicilan tinggi, dan riwayat kredit baru
 Halaman hasil menampilkan alokasi penghasilan dan perbandingan nominal serta tenor
-Setiap alternatif memakai classifier yang sama dan dapat dimuat kembali ke formulir
+Setiap alternatif memakai classifier dan bunga pilihan yang sama dan dapat dimuat kembali ke formulir
 Lihat [PRESENTATION.md](PRESENTATION.md) untuk urutan demo dan penjelasan metode
 
 ## Model dan data
@@ -88,6 +92,15 @@ Generator dan pembagian utama memakai seed 42
 Lihat [MODEL_CARD.md](MODEL_CARD.md) untuk asumsi, hasil evaluasi, dan batas pemakaian
 Metrik dataset sintetis tidak membuktikan akurasi atau kalibrasi pada peminjam Indonesia nyata
 Kalibrasi di sini hanya berlaku terhadap mekanisme pembentukan label sintetis
+
+## Bunga custom dan model
+
+Bunga pilihan digunakan bersama oleh ringkasan browser, server, rincian biaya, perkiraan kemampuan bayar, dan semua alternatif rencana
+Model tetap memakai empat fitur yang sama, bunga memengaruhi prediksi melalui rasio cicilan dan sisa penghasilan
+Artifact model tidak dilatih ulang untuk fitur ini, data pelatihan dan metrik evaluasi tetap memakai asumsi awal 1% per bulan
+Pengujian memeriksa 168 kombinasi bunga, tenor, dan riwayat kredit agar kenaikan bunga tidak meningkatkan skor kelayakan atau kemampuan pinjam
+Kesamaan fitur pada beban cicilan yang sama diperiksa terhadap perhitungan bunga awal
+Pemeriksaan tersebut membuktikan konsistensi perhitungan dan arah model, bukan akurasi atau kalibrasi pada bunga lain maupun peminjam nyata
 
 ## Melatih ulang dan menguji
 

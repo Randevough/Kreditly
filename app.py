@@ -3,6 +3,7 @@ import pickle
 from flask import Flask, render_template, request
 
 from loan_model import (FEATURE_NAMES, INPUT_LIMITS, TERMS, ANNUAL_INTEREST,
+                        DEFAULT_INTEREST_PERCENT, MAX_INTEREST_PERCENT,
                         MAX_DEBT_SHARE, RESERVE_SHARE, CAPACITY_STEP,
                         feature_row, financials, borrowing_capacity)
 import math
@@ -28,6 +29,7 @@ def calculator_settings():
         'monthlyRate': ANNUAL_INTEREST / 12, 'maxDebtShare': MAX_DEBT_SHARE,
         'reserveShare': RESERVE_SHARE, 'capacityStep': CAPACITY_STEP,
         'minLoan': INPUT_LIMITS['LoanAmount'][0], 'maxLoan': INPUT_LIMITS['LoanAmount'][1],
+        'maxInterestPercent': MAX_INTEREST_PERCENT,
     }}
 
 
@@ -37,6 +39,16 @@ def parse_rupiah(raw, name):
     if len(raw) > 32 or not re.fullmatch(r'(?:Rp\s*)?(?:[0-9]+|[0-9]{1,3}(?:\.[0-9]{3})+)', raw, re.IGNORECASE):
         raise ValueError(name)
     return int(re.sub(r'^Rp\s*', '', raw, flags=re.IGNORECASE).replace('.', ''))
+
+
+def parse_interest(raw):
+    raw = raw.strip()
+    if not re.fullmatch(r'[0-9]{1,2}(?:[.,][0-9]{1,2})?', raw):
+        raise ValueError('MonthlyInterestPercent')
+    value = float(raw.replace(',', '.'))
+    if not 0 <= value <= MAX_INTEREST_PERCENT:
+        raise ValueError('MonthlyInterestPercent')
+    return value
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -61,6 +73,7 @@ def predict():
             if value not in [str(option) for option in allowed]:
                 raise ValueError(name)
             data[name] = int(value)
+        data['MonthlyInterestPercent'] = parse_interest(request.form.get('MonthlyInterestPercent', str(DEFAULT_INTEREST_PERCENT)))
         details = financials(data)
         values = {name: str(value) for name, value in data.items()}
         capacity = borrowing_capacity(data)
@@ -112,6 +125,7 @@ def predict():
         return render_template(
             'result.html', approved=probability >= metadata['decision_threshold'],
             amount=rupiah(data['LoanAmount']), term=data['Loan_Amount_Term'],
+            interest_percent=f"{data['MonthlyInterestPercent']:g}".replace('.', ','),
             installment=rupiah(details['installment']),
             remaining=rupiah(abs(details['remaining'])), negative_balance=details['remaining'] < 0,
             debt_ratio=f"{details['debt_ratio'] * 100:.1f}".replace('.', ','),
@@ -122,7 +136,7 @@ def predict():
             capacity_budget=rupiah(capacity['monthly_budget']), capacity_reserve=rupiah(capacity['reserve']),
             capacity_capped=capacity['capped'], capacity_values=capacity_values,
             total_payment=rupiah(details['installment'] * data['Loan_Amount_Term']),
-            total_interest=rupiah(details['installment'] * data['Loan_Amount_Term'] - data['LoanAmount']),
+            total_interest=rupiah(max(0, details['installment'] * data['Loan_Amount_Term'] - data['LoanAmount'])),
             near_boundary=abs(probability - metadata['decision_threshold']) < .1,
             values=values,
         )

@@ -1,6 +1,7 @@
 """Exercise the real trained artifact, input contract, and application routes."""
 import csv
 import json
+import math
 import unittest
 from html.parser import HTMLParser
 from pathlib import Path
@@ -40,6 +41,34 @@ class CopyParser(HTMLParser):
 class FormTests(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
+
+    def test_custom_interest_is_used_and_preserved_for_every_plan(self):
+        for raw in ['0', '0,75', '1.50', '3']:
+            with self.subTest(rate=raw):
+                percent = float(raw.replace(',', '.'))
+                with patch('app.feature_row', wraps=feature_row) as features:
+                    response = self.client.post('/predict', data=dict(SAMPLE, MonthlyInterestPercent=raw))
+                self.assertEqual(response.status_code, 200)
+                text = response.get_data(as_text=True)
+                self.assertIn(f'name="MonthlyInterestPercent" value="{percent}"', text)
+                self.assertIn(f"bunga {percent:g}% per bulan".replace('.', ','), text)
+                expected = installment(50_000_000, 36, percent / 100)
+                self.assertIn(f"Rp{expected:,.0f}".replace(',', '.'), text)
+                self.assertGreater(len(features.call_args_list), 1)
+                for call in features.call_args_list:
+                    self.assertEqual(call.args[0]['MonthlyInterestPercent'], percent)
+                edit = self.client.post('/', data=dict(SAMPLE, MonthlyInterestPercent=str(percent)))
+                self.assertIn(f'value="{percent}"', edit.get_data(as_text=True))
+
+    def test_invalid_interest_never_reaches_model(self):
+        with patch.object(model, 'predict_proba', wraps=model.predict_proba) as predict:
+            for raw in ['', '-1', '3.01', '100', 'NaN', 'inf', '1e0', '0.001', '1,2.3', '1%']:
+                with self.subTest(rate=raw):
+                    response = self.client.post('/predict', data=dict(SAMPLE, MonthlyInterestPercent=raw))
+                    self.assertEqual(response.status_code, 400)
+                    self.assertIn(b'href="#MonthlyInterestPercent"', response.data)
+                    self.assertIn(b'value="50000000"', response.data)
+            predict.assert_not_called()
 
     def test_home_has_local_financial_fields(self):
         response = self.client.get('/')
@@ -171,6 +200,33 @@ class FormTests(unittest.TestCase):
 
 
 class ModelTests(unittest.TestCase):
+    def test_zero_interest_has_no_interest_cost(self):
+        data = {key: float(value) for key, value in SAMPLE.items()}
+        data['MonthlyInterestPercent'] = 0
+        self.assertEqual(installment(12_000_000, 12, 0), 1_000_000)
+        self.assertAlmostEqual(financials(data)['installment'] * 36, 50_000_000)
+        self.assertEqual(borrowing_capacity(data)['amount'], 126_000_000)
+
+    def test_rate_sweep_preserves_budget_and_model_direction(self):
+        data = {key: float(value) for key, value in SAMPLE.items()}
+        for term in [6, 12, 18, 24, 36, 48, 60]:
+            for credit in [0, 1, 2]:
+                previous_payment, previous_capacity, previous_score = 0, math.inf, 1
+                for percent in [0, .01, .25, .75, 1, 1.5, 2, 3]:
+                    plan = dict(data, Loan_Amount_Term=term, Credit_History=credit, MonthlyInterestPercent=percent)
+                    payment = financials(plan)['installment']
+                    capacity = borrowing_capacity(plan)
+                    score = model.predict_proba([feature_row(plan)])[0][1]
+                    self.assertGreaterEqual(payment, previous_payment)
+                    self.assertLessEqual(capacity['amount'], previous_capacity)
+                    self.assertLessEqual(score, previous_score + 1e-10)
+                    self.assertLessEqual(installment(capacity['amount'], term, percent / 100), capacity['monthly_budget'] + 1e-6)
+                    # Equal payment at the training rate produces the same model features
+                    equivalent = dict(plan, MonthlyInterestPercent=1, LoanAmount=payment / installment(1, term))
+                    for actual, expected in zip(feature_row(plan), feature_row(equivalent)):
+                        self.assertAlmostEqual(actual, expected, places=12)
+                    previous_payment, previous_capacity, previous_score = payment, capacity['amount'], score
+
     def test_financial_calculation(self):
         data = {key: float(value) for key, value in SAMPLE.items()}
         details = financials(data)

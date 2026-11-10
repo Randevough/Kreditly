@@ -29,6 +29,13 @@
 {{ field('CoapplicantIncome', 'Penghasilan pendamping', 'Isi 0 jika mengajukan sendiri', prefix='Rp', placeholder='0', maximum='15000000') }}
 {{ field('LoanAmount', 'Jumlah pinjaman', 'Rp1 juta sampai Rp500 juta', prefix='Rp', placeholder='50.000.000', minimum='1000000', maximum='500000000') }}
 {{ field('Loan_Amount_Term', 'Tenor pinjaman', 'Lama pengembalian dalam bulan', [('6','6 bulan'),('12','12 bulan · 1 tahun'),('18','18 bulan'),('24','24 bulan · 2 tahun'),('36','36 bulan · 3 tahun'),('48','48 bulan · 4 tahun'),('60','60 bulan · 5 tahun')]) }}
+<div class="field">
+<label for="MonthlyInterestPercent">Bunga per bulan</label>
+<div class="input-wrap"><input id="MonthlyInterestPercent" name="MonthlyInterestPercent" type="text" inputmode="decimal" maxlength="5" required value="{{ values.get('MonthlyInterestPercent', '1') }}" aria-describedby="MonthlyInterestPercent-hint MonthlyInterestPercent-error" {% if error_field == 'MonthlyInterestPercent' %}aria-invalid="true"{% endif %}><span aria-hidden="true">%</span></div>
+<small id="MonthlyInterestPercent-hint">0 sampai 3% per bulan, contoh 0,75 untuk bunga 0,75%</small>
+<span class="field-error" id="MonthlyInterestPercent-error" aria-live="polite" hidden></span>
+</div>
+<div class="interest-method"><strong>Bunga atas sisa pokok</strong><p>Cicilan tetap setiap bulan, bagian bunga berkurang seiring pembayaran</p></div>
 </div></fieldset>
 <fieldset id="profil"><legend><span class="section-number">02</span> Profil & riwayat</legend><p class="section-description">Lengkapi pengeluaran dan riwayat kreditmu</p><div class="fields">
 {{ field('ExistingInstallments', 'Cicilan berjalan per bulan', 'Total cicilan lain, isi 0 jika tidak ada', prefix='Rp', placeholder='500.000', maximum='20000000') }}
@@ -41,11 +48,11 @@
 <noscript><p>Aktifkan JavaScript untuk memakai ringkasan otomatis dan contoh profil, formulir tetap dapat dikirim</p></noscript>
 </form></section>
 <aside class="right">
-<section class="summary loan-preview" aria-labelledby="summary-title"><span class="summary-kicker">RENCANA PINJAMANMU</span><h2 id="summary-title">Perkiraan cicilan bulanan</h2><div class="summary-value primary-payment" id="monthly">Lengkapi rencana</div><p class="summary-note">Bunga 1% per bulan atas sisa pokok pinjaman</p>
+<section class="summary loan-preview" aria-labelledby="summary-title"><span class="summary-kicker">RENCANA PINJAMANMU</span><h2 id="summary-title">Perkiraan cicilan bulanan</h2><div class="summary-value primary-payment" id="monthly">Lengkapi rencana</div><p class="summary-note">Bunga <span id="live-rate">1%</span> per bulan atas sisa pokok pinjaman</p>
 <dl><div><dt>Jumlah pinjaman</dt><dd id="amount">Belum diisi</dd></div><div><dt>Tenor</dt><dd id="term">Pilih tenor</dd></div><div><dt>Penghasilan gabungan</dt><dd id="income">Belum diisi</dd></div></dl>
 <details class="preview-costs"><summary>Rincian pokok dan bunga</summary><dl><div><dt>Perkiraan total bunga</dt><dd id="live-interest">Belum dihitung</dd></div><div><dt>Total pokok + bunga</dt><dd id="live-total">Belum dihitung</dd></div></dl><p class="summary-note">Administrasi, asuransi, dan biaya lain belum diperhitungkan</p></details>
 <div class="live-indicators"><div><span>Rasio seluruh cicilan</span><strong id="live-ratio">Belum dihitung</strong></div><div><span>Sisa setelah kebutuhan</span><strong id="live-remaining">Belum dihitung</strong></div></div>
-<div class="progress-head"><span id="completion" role="status" aria-live="polite">0 dari 7 kolom terisi</span></div><progress id="progress" max="7" value="0" aria-label="Kelengkapan profil">0 dari 7</progress></section>
+<div class="progress-head"><span id="completion" role="status" aria-live="polite">1 dari 8 kolom terisi</span></div><progress id="progress" max="8" value="1" aria-label="Kelengkapan profil">1 dari 8</progress></section>
 <section class="capacity-preview" aria-labelledby="capacity-preview-title"><span class="capacity-label">SESUAI ANGGARANMU</span><h3 id="capacity-preview-title">Perkiraan nominal pinjaman</h3><div class="capacity-value" id="live-capacity">Lengkapi anggaranmu</div><p id="capacity-context">Isi penghasilan, pengeluaran, dan tenor untuk melihat perkiraan</p><button type="button" id="use-capacity" class="secondary" hidden>Gunakan nominal ini {{ icon('arrow') }}</button><details><summary>Asumsi perhitungan</summary><p>Total cicilan dibatasi 40% penghasilan dan sisa setelah kebutuhan serta cicilan minimal 15% penghasilan</p><p>Perkiraan anggaran, bukan limit persetujuan pemberi pinjaman</p></details></section>
 <section class="info" id="panduan">{{ icon('info') }}<div><h3>Panduan pengisian</h3><p>Isi biaya hidup di luar cicilan, lalu masukkan total cicilan yang masih berjalan</p><details><summary>Tentang penilaian</summary><p>Model memakai data sintetis untuk tugas dan belum divalidasi pada peminjam nyata, hasil bukan persetujuan kredit</p></details></div></section>
 </aside>

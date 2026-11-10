@@ -25,11 +25,15 @@ Hasil ini tidak membuktikan bahwa hubungan yang sama berlaku di dunia nyata
 Riwayat baru diwakili oleh kedua indikator kredit bernilai 0
 Penghasilan dan nominal mentah tetap diperlukan untuk menghitung cicilan dan rasio
 Gender, pernikahan, pendidikan, dan lokasi tidak digunakan
-Bunga 1% per bulan atas saldo berjalan merupakan asumsi tugas, tanpa biaya lain
+Pelatihan dan metrik evaluasi memakai bunga 1% per bulan atas saldo berjalan, tanpa biaya lain
+Aplikasi mendukung bunga pilihan 0–3% per bulan melalui perhitungan cicilan sebelum ekstraksi fitur
+Bunga 0% memakai pokok dibagi tenor, bunga lainnya memakai anuitas dengan cicilan tetap
+Model dan metadata tetap memakai artifact awal, belum ada evaluasi akurasi atau kalibrasi khusus untuk bunga lain
+Pengujian bunga custom memeriksa konsistensi fitur, arah prediksi, dan batas kemampuan bayar
 
 Arah model diperiksa agar peningkatan pinjaman, cicilan lain, atau biaya hidup tidak meningkatkan skor kelayakan
 Peningkatan penghasilan atau tenor tidak menurunkan skor dalam kondisi input lainnya tetap
-Tenor lebih panjang menambah total pembayaran walaupun cicilan bulanan turun
+Saat bunga lebih dari 0%, tenor lebih panjang menambah total pembayaran walaupun cicilan bulanan turun
 Pemeriksaan ini adalah kontrak perilaku untuk mekanisme tugas, bukan rekomendasi kebijakan kredit
 
 ## Pembagian dan pemilihan model

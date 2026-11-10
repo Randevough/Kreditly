@@ -2,6 +2,8 @@
 import math
 
 ANNUAL_INTEREST = 0.12  # Assignment assumption, not a lender offer
+DEFAULT_INTEREST_PERCENT = ANNUAL_INTEREST / 12 * 100
+MAX_INTEREST_PERCENT = 3
 TERMS = (6, 12, 18, 24, 36, 48, 60)
 INPUT_LIMITS = {
     'ApplicantIncome': (2_000_000, 40_000_000),
@@ -15,16 +17,20 @@ FEATURE_NAMES = [
 ]
 
 
-def installment(amount, term):
-    rate = ANNUAL_INTEREST / 12
-    return amount * rate / (1 - (1 + rate) ** -term)
+def installment(amount, term, rate=ANNUAL_INTEREST / 12):
+    if not math.isfinite(rate) or not 0 <= rate <= MAX_INTEREST_PERCENT / 100:
+        raise ValueError('MonthlyInterestPercent')
+    if rate == 0:
+        return amount / term
+    return amount * rate / -math.expm1(-term * math.log1p(rate))
 
 
 def financials(data):
     income = data['ApplicantIncome'] + data['CoapplicantIncome']
     if not math.isfinite(income) or income <= 0:
         raise ValueError('ApplicantIncome')
-    payment = installment(data['LoanAmount'], data['Loan_Amount_Term'])
+    rate = data.get('MonthlyInterestPercent', DEFAULT_INTEREST_PERCENT) / 100
+    payment = installment(data['LoanAmount'], data['Loan_Amount_Term'], rate)
     debt_ratio = (data['ExistingInstallments'] + payment) / income
     remaining = income - data['LivingExpenses'] - data['ExistingInstallments'] - payment
     return {'income': income, 'installment': payment,
@@ -49,7 +55,8 @@ def borrowing_capacity(data):
     debt_room = MAX_DEBT_SHARE * income - data['ExistingInstallments']
     cash_room = income - data['LivingExpenses'] - data['ExistingInstallments'] - RESERVE_SHARE * income
     monthly_budget = max(0, min(debt_room, cash_room))
-    raw_amount = monthly_budget / installment(1, data['Loan_Amount_Term'])
+    rate = data.get('MonthlyInterestPercent', DEFAULT_INTEREST_PERCENT) / 100
+    raw_amount = monthly_budget / installment(1, data['Loan_Amount_Term'], rate)
     amount = min(INPUT_LIMITS['LoanAmount'][1], math.floor(raw_amount / CAPACITY_STEP) * CAPACITY_STEP)
     if amount < INPUT_LIMITS['LoanAmount'][0]:
         amount = 0

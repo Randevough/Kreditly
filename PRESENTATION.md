@@ -24,7 +24,10 @@ Dataset bukan data peminjam nyata dan hasil bukan persetujuan lembaga keuangan
 | Riwayat kredit baru | Rp6.000.000 | Rp1.882.939 | 36,4% | Rp1.317.061 | Layak |
 
 Nominal pada tabel dibulatkan ke rupiah, rasio ditulis satu desimal
-Bunga 1% per bulan merupakan asumsi proyek
+Tabel contoh memakai nilai awal bunga 1% per bulan sebagai asumsi proyek
+Bunga dapat diubah dari 0 sampai 3% per bulan, termasuk angka desimal seperti 0,75%
+Untuk demo, ubah bunga pada profil yang sama dan tunjukkan perubahan cicilan serta kemampuan pinjam
+Model membaca perubahan beban cicilan melalui fitur keuangan, belum ada bukti akurasi atau kalibrasi khusus pada bunga lain
 Rasio dan sisa penghasilan adalah indikator perhitungan, bukan bukti sebab akibat dari model
 
 ## Cara menjelaskan metode

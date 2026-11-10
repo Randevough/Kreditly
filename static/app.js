@@ -1,4 +1,4 @@
-import {parseRupiah, formatInput, formatMoney as money, formatEdit, calculateBudget} from './money.mjs';
+import {parseRupiah, formatInput, formatMoney as money, formatEdit, calculateBudget, parseInterestPercent, installmentFactor} from './money.mjs';
 
 const form = document.querySelector('#loan-form');
 const inputs = [...form.querySelectorAll('input[required], select[required]')];
@@ -7,6 +7,7 @@ const submit = form.querySelector('[type="submit"]');
 const config = JSON.parse(document.querySelector('#calculator-config').textContent);
 const profileButtons = [...document.querySelectorAll('[data-profile]')];
 const capacityButton = document.querySelector('#use-capacity');
+const interestInput = form.elements.namedItem('MonthlyInterestPercent');
 let currentCapacity = 0;
 const amountValue = name => parseRupiah(form.elements.namedItem(name).value) ?? 0;
 const setText = (id, value) => { document.getElementById(id).textContent = value; };
@@ -29,22 +30,38 @@ function validateMoney(input, reveal = false) {
   return !message;
 }
 
+function validateInterest(reveal = false) {
+  const value = parseInterestPercent(interestInput.value, config.maxInterestPercent);
+  const message = value === null ? 'Isi bunga 0 sampai 3%, maksimal dua angka desimal' : '';
+  interestInput.setCustomValidity(message);
+  const error = document.querySelector('#MonthlyInterestPercent-error');
+  const show = reveal || interestInput.getAttribute('aria-invalid') === 'true';
+  error.textContent = show ? message : '';
+  error.hidden = !show || !message;
+  if (show && message) interestInput.setAttribute('aria-invalid', 'true');
+  else if (!message) interestInput.removeAttribute('aria-invalid');
+  return value;
+}
+
 function update() {
   const values = Object.fromEntries(moneyInputs.map(input => [input.name, amountValue(input.name)]));
+  const percent = validateInterest();
+  values.MonthlyInterestPercent = percent ?? NaN;
   values.Loan_Amount_Term = Number(form.elements.namedItem('Loan_Amount_Term').value);
   const amount = values.LoanAmount;
   const term = values.Loan_Amount_Term;
   const income = values.ApplicantIncome + values.CoapplicantIncome;
   const budget = calculateBudget(values, config);
-  const payment = term && amount ? amount * config.monthlyRate / (1 - (1 + config.monthlyRate) ** -term) : 0;
+  const payment = term && amount && percent !== null ? amount * installmentFactor(term, percent / 100) : 0;
+  setText('live-rate', percent === null ? 'Belum diisi' : `${percent.toLocaleString('id-ID')}%`);
   setText('amount', amount ? money(amount) : 'Belum diisi');
   setText('term', term ? `${term} bulan` : 'Pilih tenor');
   setText('income', income ? money(income) : 'Belum diisi');
   setText('monthly', payment ? money(payment) : 'Lengkapi rencana');
   setText('live-total', payment ? money(payment * term) : 'Belum dihitung');
-  setText('live-interest', payment ? money(payment * term - amount) : 'Belum dihitung');
+  setText('live-interest', payment ? money(Math.max(0, payment * term - amount)) : 'Belum dihitung');
   const budgetReady = moneyInputs.filter(input => input.name !== 'LoanAmount')
-    .every(input => input.value.trim() !== '' && input.validity.valid) && term > 0;
+    .every(input => input.value.trim() !== '' && input.validity.valid) && term > 0 && percent !== null;
   setText('live-ratio', budgetReady && payment ? `${(budget.ratio * 100).toLocaleString('id-ID', {maximumFractionDigits: 1})}%` : 'Belum dihitung');
   setText('live-remaining', budgetReady && payment ? money(budget.remaining) : 'Belum dihitung');
   document.querySelector('#live-remaining').classList.toggle('shortfall', !!budget && budget.remaining < 0 && budgetReady);
@@ -72,7 +89,9 @@ moneyInputs.forEach(input => {
 });
 form.addEventListener('invalid', event => {
   if (event.target.matches('[data-money]')) validateMoney(event.target, true);
+  if (event.target === interestInput) validateInterest(true);
 }, true);
+interestInput.addEventListener('blur', () => validateInterest(true));
 form.addEventListener('input', () => {
   profileButtons.forEach(button => button.setAttribute('aria-pressed', 'false'));
   update();
@@ -109,7 +128,7 @@ form.addEventListener('reset', event => {
   event.preventDefault();
   profileButtons.forEach(button => button.setAttribute('aria-pressed', 'false'));
   inputs.forEach(input => {
-    input.value = '';
+    input.value = input === interestInput ? String(config.monthlyRate * 100) : '';
     input.removeAttribute('aria-invalid');
     if (input.matches('[data-money]')) validateMoney(input);
   });
