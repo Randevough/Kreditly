@@ -81,3 +81,10 @@ Pada contoh Pengeluaran terjaga tenor 36 bulan, perkiraan nominal anggaran adala
 Gunakan tombol Coba nominal ini untuk memuat nilainya ke formulir sebelum menilai ulang
 Jelaskan bahwa perhitungan memakai asumsi 40% batas seluruh cicilan dan 15% sisa penghasilan, bukan limit persetujuan bank
 Pada contoh Cicilan tinggi, aplikasi tidak menawarkan nominal baru karena ruang anggaran tidak mencukupi
+
+## Konsistensi nominal yang ditawarkan
+
+Nominal harus sesuai anggaran dan lolos penilaian awal dengan data yang sama
+Pada profil riwayat kredit baru, bunga 1%, tenor 24 bulan, batas anggaran Rp44.600.000 disesuaikan menjadi Rp42.500.000 setelah pemeriksaan model
+Klik Coba nominal ini dan kirim lagi tanpa mengubah data untuk menunjukkan hasil tetap memenuhi kelayakan
+Riwayat kredit lancar bisa menghasilkan nominal yang berbeda walaupun batas anggarannya sama

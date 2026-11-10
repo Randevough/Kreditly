@@ -51,6 +51,45 @@ def parse_interest(raw):
     return value
 
 
+def parse_application(form):
+    data = {}
+    for name, (minimum, maximum) in INPUT_LIMITS.items():
+        value = parse_rupiah(form[name], name)
+        if not math.isfinite(value) or not minimum <= value <= maximum:
+            raise ValueError(name)
+        data[name] = value
+    for name, allowed in [('Loan_Amount_Term', TERMS), ('Credit_History', (0, 1, 2))]:
+        value = form[name]
+        if value not in [str(option) for option in allowed]:
+            raise ValueError(name)
+        data[name] = int(value)
+    data['MonthlyInterestPercent'] = parse_interest(form.get('MonthlyInterestPercent', str(DEFAULT_INTEREST_PERCENT)))
+    return data
+
+
+def assessed_capacity(data):
+    capacity = borrowing_capacity(data)
+    capacity['budget_amount'] = capacity['amount']
+    capacity['amount'] = 0
+    amounts = range(INPUT_LIMITS['LoanAmount'][0], capacity['budget_amount'] + 1, CAPACITY_STEP)
+    if amounts:
+        # At most 4,991 candidates, evaluated together without assuming model monotonicity
+        probabilities = model.predict_proba([feature_row(dict(data, LoanAmount=amount)) for amount in amounts])[:, 1]
+        for amount, probability in zip(amounts, probabilities):
+            if probability >= metadata['decision_threshold']:
+                capacity['amount'] = amount
+    return capacity
+
+
+@app.post('/estimate')
+def estimate():
+    try:
+        capacity = assessed_capacity(parse_application(request.form))
+        return {'amount': capacity['amount'], 'budget_amount': capacity['budget_amount']}
+    except (KeyError, ValueError):
+        return {'error': 'Lengkapi data dan periksa kembali isianmu'}, 400
+
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
     return render_template('index.html', values=request.form)
@@ -59,24 +98,10 @@ def home():
 @app.post('/predict')
 def predict():
     try:
-        data = {}
-        for name, (minimum, maximum) in INPUT_LIMITS.items():
-            try:
-                value = parse_rupiah(request.form[name], name)
-            except ValueError:
-                raise ValueError(name) from None
-            if not math.isfinite(value) or not minimum <= value <= maximum:
-                raise ValueError(name)
-            data[name] = value
-        for name, allowed in [('Loan_Amount_Term', TERMS), ('Credit_History', (0, 1, 2))]:
-            value = request.form[name]
-            if value not in [str(option) for option in allowed]:
-                raise ValueError(name)
-            data[name] = int(value)
-        data['MonthlyInterestPercent'] = parse_interest(request.form.get('MonthlyInterestPercent', str(DEFAULT_INTEREST_PERCENT)))
+        data = parse_application(request.form)
         details = financials(data)
         values = {name: str(value) for name, value in data.items()}
-        capacity = borrowing_capacity(data)
+        capacity = assessed_capacity(data)
         capacity_values = {**values, 'LoanAmount': str(int(capacity['amount']))}
         probability = float(model.predict_proba([feature_row(data)])[0][1])
         credit_labels = {0: 'Pernah menunggak', 1: 'Pembayaran lancar', 2: 'Belum punya riwayat'}
@@ -135,6 +160,7 @@ def predict():
             capacity_amount=rupiah(capacity['amount']), capacity_available=capacity['amount'] > 0,
             capacity_budget=rupiah(capacity['monthly_budget']), capacity_reserve=rupiah(capacity['reserve']),
             capacity_capped=capacity['capped'], capacity_values=capacity_values,
+            capacity_limited_by_model=capacity['amount'] < capacity['budget_amount'],
             total_payment=rupiah(details['installment'] * data['Loan_Amount_Term']),
             total_interest=rupiah(max(0, details['installment'] * data['Loan_Amount_Term'] - data['LoanAmount'])),
             near_boundary=abs(probability - metadata['decision_threshold']) < .1,

@@ -6,8 +6,9 @@ import unittest
 from html.parser import HTMLParser
 from pathlib import Path
 from unittest.mock import patch
+import numpy as np
 
-from app import app, metadata, model, parse_rupiah
+from app import app, metadata, model, parse_rupiah, assessed_capacity
 from loan_model import FEATURE_NAMES, feature_row, financials, installment, borrowing_capacity
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,6 +42,38 @@ class CopyParser(HTMLParser):
 class FormTests(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
+
+    def test_new_credit_recommendation_survives_the_reported_round_trip(self):
+        profile = dict(SAMPLE, ApplicantIncome='6000000', CoapplicantIncome='0',
+                       LoanAmount='40000000', Loan_Amount_Term='24', ExistingInstallments='300000',
+                       LivingExpenses='2500000', Credit_History='2')
+        old_offer = self.client.post('/predict', data=dict(profile, LoanAmount='44600000'))
+        self.assertIn('Diprediksi belum memenuhi kelayakan', old_offer.get_data(as_text=True))
+        offer = self.client.post('/estimate', data=profile).get_json()
+        self.assertEqual(offer['budget_amount'], 44600000)
+        self.assertGreater(offer['amount'], 0)
+        self.assertLess(offer['amount'], offer['budget_amount'])
+        first = self.client.post('/predict', data=profile)
+        self.assertIn(f"name=\"LoanAmount\" value=\"{offer['amount']}\"", first.get_data(as_text=True))
+        selected = dict(profile, LoanAmount=str(offer['amount']))
+        edit = self.client.post('/', data=selected)
+        self.assertIn(f"value=\"{offer['amount']}\"", edit.get_data(as_text=True))
+        result = self.client.post('/predict', data=selected)
+        self.assertIn('Diprediksi memenuhi kelayakan', result.get_data(as_text=True))
+        self.assertEqual(self.client.post('/estimate', data=selected).get_json(), offer)
+
+    def test_estimate_validates_input_before_running_model(self):
+        for changes in [{'Credit_History': ''}, {'LoanAmount': '-1'}, {'MonthlyInterestPercent': '4'}]:
+            with patch.object(model, 'predict_proba', wraps=model.predict_proba) as predict:
+                self.assertEqual(self.client.post('/estimate', data=dict(SAMPLE, **changes)).status_code, 400)
+                predict.assert_not_called()
+
+    def test_model_rejection_with_budget_room_does_not_offer_a_button(self):
+        with patch.object(model, 'predict_proba', side_effect=lambda rows: np.tile([1., 0.], (len(rows), 1))):
+            response = self.client.post('/predict', data=SAMPLE)
+            self.assertNotIn('Coba nominal ini', response.get_data(as_text=True))
+            self.assertIn('Belum ada nominal yang memenuhi penilaian', response.get_data(as_text=True))
+            self.assertEqual(self.client.post('/estimate', data=SAMPLE).get_json()['amount'], 0)
 
     def test_custom_interest_is_used_and_preserved_for_every_plan(self):
         for raw in ['0', '0,75', '1.50', '3']:
@@ -149,7 +182,7 @@ class FormTests(unittest.TestCase):
         response = self.client.post('/predict', data=dict(SAMPLE, LivingExpenses='9000000'))
         self.assertEqual(response.status_code, 200)
         text = response.get_data(as_text=True)
-        self.assertIn('Belum ada ruang untuk cicilan baru', text)
+        self.assertIn('Belum ada nominal yang memenuhi penilaian', text)
         self.assertNotIn('Coba nominal ini', text)
         self.assertIn('Anggaran bulanan belum cukup', text)
 
@@ -200,6 +233,24 @@ class FormTests(unittest.TestCase):
 
 
 class ModelTests(unittest.TestCase):
+    def test_offered_amount_fits_budget_and_actual_model_across_profiles_and_rates(self):
+        data = {key: float(value) for key, value in SAMPLE.items()}
+        for credit in [0, 1, 2]:
+            for percent in [0, .75, 1, 1.5, 3]:
+                plan = dict(data, Credit_History=credit, MonthlyInterestPercent=percent)
+                offer = assessed_capacity(plan)
+                self.assertLessEqual(offer['amount'], borrowing_capacity(plan)['amount'])
+                if not offer['amount']:
+                    continue
+                self.assertEqual(offer['amount'] % 100000, 0)
+                proposed = dict(plan, LoanAmount=offer['amount'])
+                self.assertGreaterEqual(model.predict_proba([feature_row(proposed)])[0][1], metadata['decision_threshold'])
+                self.assertLessEqual(financials(proposed)['installment'], offer['monthly_budget'] + 1e-6)
+                # The next grid point must exceed the budget or fail the model
+                next_amount = offer['amount'] + 100000
+                if next_amount <= offer['budget_amount']:
+                    self.assertLess(model.predict_proba([feature_row(dict(plan, LoanAmount=next_amount))])[0][1], metadata['decision_threshold'])
+
     def test_zero_interest_has_no_interest_cost(self):
         data = {key: float(value) for key, value in SAMPLE.items()}
         data['MonthlyInterestPercent'] = 0

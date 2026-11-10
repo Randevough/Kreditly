@@ -53,7 +53,7 @@ Data formulir tidak disimpan ke database atau penyimpanan browser
 
 ## Perkiraan nominal dan rincian biaya
 
-Perkiraan nominal adalah perhitungan anggaran yang terpisah dari prediksi classifier
+Nominal yang ditawarkan harus memenuhi batas anggaran sekaligus lolos prediksi classifier pada data yang sama
 Asumsi tugas: seluruh cicilan maksimal 40% penghasilan gabungan dan sisa setelah biaya hidup serta cicilan minimal 15% penghasilan
 Ruang cicilan baru adalah nilai terkecil dari dua batas berikut, dengan minimum nol
 
@@ -62,7 +62,14 @@ Ruang cicilan baru adalah nilai terkecil dari dua batas berikut, dengan minimum 
 
 Ruang cicilan dikonversi menjadi pokok pinjaman melalui invers rumus anuitas pada tenor yang dipilih
 Nominal dibulatkan turun ke kelipatan Rp100.000 dan dibatasi pada rentang Rp1 juta sampai Rp500 juta
-Jika tidak ada nominal dalam rentang tersebut, aplikasi tidak menawarkan tombol penggunaan nominal
+Setiap kandidat dalam batas anggaran diperiksa pada kelipatan Rp100.000 dengan model, ambang keputusan, riwayat kredit, tenor, dan bunga yang sama dengan halaman hasil
+Aplikasi menawarkan kandidat terbesar yang lolos kedua pemeriksaan, tanpa mengasumsikan arah model selalu monoton
+Jika tidak ada kandidat yang lolos, aplikasi tidak menawarkan tombol penggunaan nominal
+Ringkasan form mengambil nominal terverifikasi dari endpoint lokal `POST /estimate` setelah seluruh data valid
+Saat data berubah, tombol nominal dinonaktifkan sampai pemeriksaan terbaru selesai dan respons lama diabaikan
+Jika pemeriksaan gagal, aplikasi tidak memakai batas anggaran sebagai pengganti nominal yang lolos
+Contoh riwayat kredit baru pada bunga 1% dan tenor 24 bulan memiliki batas anggaran Rp44.600.000, tetapi nominal terbesar yang lolos model adalah Rp42.500.000
+Pengujian memastikan nominal yang ditawarkan tetap dinilai layak setelah dimuat ke form dan dikirim ulang tanpa perubahan data
 Perkiraan ini bukan limit atau jaminan persetujuan lembaga keuangan
 
 Rincian biaya memisahkan pokok pinjaman, total bunga, dan total pokok + bunga

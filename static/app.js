@@ -9,6 +9,9 @@ const profileButtons = [...document.querySelectorAll('[data-profile]')];
 const capacityButton = document.querySelector('#use-capacity');
 const interestInput = form.elements.namedItem('MonthlyInterestPercent');
 let currentCapacity = 0;
+let capacityTimer;
+let capacityRequest;
+let capacityVersion = 0;
 const amountValue = name => parseRupiah(form.elements.namedItem(name).value) ?? 0;
 const setText = (id, value) => { document.getElementById(id).textContent = value; };
 
@@ -65,13 +68,41 @@ function update() {
   setText('live-ratio', budgetReady && payment ? `${(budget.ratio * 100).toLocaleString('id-ID', {maximumFractionDigits: 1})}%` : 'Belum dihitung');
   setText('live-remaining', budgetReady && payment ? money(budget.remaining) : 'Belum dihitung');
   document.querySelector('#live-remaining').classList.toggle('shortfall', !!budget && budget.remaining < 0 && budgetReady);
-  currentCapacity = budgetReady ? budget.capacity : 0;
-  setText('live-capacity', budgetReady ? (currentCapacity ? money(currentCapacity) : 'Belum ada ruang') : 'Lengkapi anggaranmu');
-  setText('capacity-context', budgetReady ? `Untuk tenor ${term} bulan dengan asumsi anggaran aplikasi` : 'Isi penghasilan, pengeluaran, dan tenor untuk melihat perkiraan');
-  capacityButton.hidden = !currentCapacity;
+  updateCapacity();
   const completed = inputs.filter(input => input.value !== '' && input.validity.valid).length;
   setText('completion', `${completed} dari ${inputs.length} kolom terisi`);
   document.querySelector('#progress').value = completed;
+}
+
+function updateCapacity() {
+  clearTimeout(capacityTimer);
+  capacityRequest?.abort();
+  const version = ++capacityVersion;
+  currentCapacity = 0;
+  capacityButton.hidden = true;
+  const ready = inputs.every(input => input.value.trim() !== '' && input.validity.valid);
+  setText('live-capacity', ready ? 'Memeriksa nominal' : 'Lengkapi profilmu');
+  setText('capacity-context', ready ? 'Mempertimbangkan anggaran dan riwayat kreditmu' : 'Lengkapi data, termasuk riwayat kredit, untuk melihat nominal');
+  if (!ready) return;
+  const snapshot = new FormData(form);
+  capacityRequest = new AbortController();
+  const signal = capacityRequest.signal;
+  capacityTimer = setTimeout(async () => {
+    try {
+      const response = await fetch('/estimate', {method: 'POST', body: snapshot, signal});
+      if (!response.ok) throw new Error('Estimate unavailable');
+      const result = await response.json();
+      if (version !== capacityVersion) return;
+      currentCapacity = result.amount;
+      setText('live-capacity', currentCapacity ? money(currentCapacity) : 'Belum ada nominal yang sesuai');
+      setText('capacity-context', currentCapacity ? 'Sesuai anggaran dan lolos penilaian awal dengan data yang sama' : 'Belum ada nominal yang memenuhi anggaran dan penilaian awal');
+      capacityButton.hidden = !currentCapacity;
+    } catch (error) {
+      if (signal.aborted || version !== capacityVersion) return;
+      setText('live-capacity', 'Belum bisa diperiksa');
+      setText('capacity-context', 'Coba kembali atau lanjutkan ke hasil penilaian');
+    }
+  }, 300);
 }
 
 moneyInputs.forEach(input => {
